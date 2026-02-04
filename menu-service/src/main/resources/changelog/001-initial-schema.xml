@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="005-create-menus-table" author="your-name">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="menus"/>
+            </not>
+        </preConditions>
+        <createTable tableName="menus">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="meal" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint
+                tableName="menus"
+                columnNames="date, meal, user_id"
+                constraintName="uc_menus_date_meal_user"/>
+    </changeSet>
+
+    <changeSet id="006-create-menu-dishes-table" author="your-name">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="menu_dishes"/>
+            </not>
+        </preConditions>
+        <createTable tableName="menu_dishes">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="menu_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="dish_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint
+                tableName="menu_dishes"
+                columnNames="menu_id, dish_id"
+                constraintName="unique_menu_dishes"/>
+
+        <addForeignKeyConstraint
+                baseTableName="menu_dishes"
+                baseColumnNames="menu_id"
+                referencedTableName="menus"
+                referencedColumnNames="id"
+                constraintName="fk_menu_dishes_menu"
+                onDelete="CASCADE"/>
+    </changeSet>
+
+</databaseChangeLog>
