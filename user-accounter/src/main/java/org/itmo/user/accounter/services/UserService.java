@@ -6,32 +6,27 @@ import org.itmo.user.accounter.repositories.UserRepository;
 import org.itmo.user.accounter.model.entities.User;
 import lombok.AllArgsConstructor;
 
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
 @Service
 @AllArgsConstructor
-public class UserService {
+public class UserService implements ReactiveUserDetailsService {
     private UserRepository userRep;
 
     @Transactional
-    public Mono<User> save(User user) {
-        return userRep.findByName(user.getName())
+    public Mono<User> create(User user) {
+        return userRep.findByUsername(user.getUsername())
                 .doOnNext(x -> {
-                    throw new DataIntegrityViolationException("User with name " + user.getName() + " already exists" );
+                    throw new DataIntegrityViolationException("User with name " + user.getUsername() + " already exists" );
                 })
                 .switchIfEmpty(userRep.save(user));
-    }
-
-    @Transactional
-    public Mono<User> update(User user) {
-        return userRep.findById(user.getId())
-                .switchIfEmpty(Mono.error(new ItemNotFoundException("User with id " + user.getId() + " was not found")))
-                .flatMap(existingUser -> {
-                    existingUser.setName(user.getName());
-                    return userRep.save(existingUser);
-                });
     }
 
     @Transactional
@@ -41,11 +36,29 @@ public class UserService {
                 .flatMap(user -> userRep.deleteById(id));
     }
 
-    public Mono<User> findByName(String name) {
-        return userRep.findByName(name);
-    }
-
     public Mono<User> findById(Long id) {
         return userRep.findById(id);
+    }
+
+    public Mono<User> getCurrentUser() {
+        return ReactiveSecurityContextHolder.getContext()
+                .map(SecurityContext::getAuthentication)
+                .flatMap(auth -> {
+                    if (auth == null) {
+                        return Mono.error(new BadCredentialsException("Unauthenticated"));
+                    } else {
+                        return findUserByUsername(auth.getName());
+                    }
+                });
+    }
+
+    @Override
+    public Mono<UserDetails> findByUsername(String username) {
+        return userRep.findByUsername(username)
+                .map(user -> user);
+    }
+
+    public Mono<User> findUserByUsername(String username) {
+        return userRep.findByUsername(username);
     }
 }

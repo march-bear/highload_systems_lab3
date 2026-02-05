@@ -4,8 +4,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 
 @Schema(name = "Объект для создания пользователя", description = "Содержит имя для нового пользователя")
-public record UserCreateDto(
+public record UserAuthDto(
     @Schema(description = "Имя пользователя", type = "string", example = "Олег")
     @Size(min = 3, max = 20, message = "Длина имени пользователя должна быть в пределах от 3 до 20 символов")
-    String name
+    String username,
+    String password
 ) { }

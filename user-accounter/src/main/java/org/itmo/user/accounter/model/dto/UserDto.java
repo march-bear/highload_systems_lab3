@@ -7,5 +7,7 @@ public record UserDto(
     @Schema(description = "ID пользователя", type = "number", example = "1")
     Long id,
     @Schema(description = "Имя пользователя", type = "string", example = "Олежа")
-    String name
+    String username,
+    @Schema(description = "Роль пользователя", type = "string", example = "USER")
+    String role
 ) { }

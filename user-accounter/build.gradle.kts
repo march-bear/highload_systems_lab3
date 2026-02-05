@@ -19,6 +19,8 @@ repositories {
 }
 
 dependencies {
+    implementation("io.jsonwebtoken:jjwt-api:0.13.0")
+    implementation("org.springframework.boot:spring-boot-starter-security:3.5.8")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
 
@@ -30,8 +32,11 @@ dependencies {
     implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")
 
     implementation("org.liquibase:liquibase-core:5.0.1")
+
     runtimeOnly("org.postgresql:postgresql")
     runtimeOnly("io.r2dbc:r2dbc-pool")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.13.0")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.13.0")
 
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
