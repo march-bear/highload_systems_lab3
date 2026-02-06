@@ -33,7 +33,7 @@ public class AuthController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Аутентификация прошла успешно",
                     content = {
-                            @Content(mediaType = "application/json", schema = @Schema(implementation = UserDto.class))
+                            @Content(mediaType = "application/json", schema = @Schema(implementation = JwtTokenDto.class))
                     }
             ),
             @ApiResponse(responseCode = "400", description = "Аутентификация не удалась",
@@ -52,9 +52,9 @@ public class AuthController {
 
     @Operation(summary = "Регистрация", description = "Создается новый пользователь с ролью USER")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Пользователь был успешно создан",
+            @ApiResponse(responseCode = "200", description = "Регистрация прошла успешно",
                     content = {
-                            @Content(mediaType = "application/json", schema = @Schema(implementation = UserDto.class))
+                            @Content(mediaType = "application/json", schema = @Schema(implementation = JwtTokenDto.class))
                     }
             ),
             @ApiResponse(responseCode = "400", description = "Пользователь с таким же именем уже есть базе",

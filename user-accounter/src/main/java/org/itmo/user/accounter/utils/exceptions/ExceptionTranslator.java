@@ -20,4 +20,9 @@ public class ExceptionTranslator {
     public Mono<ErrorDto> processItemNotFoundException(DataIntegrityViolationException ex) {
         return Mono.just(new ErrorDto(ex.getMessage()));
     }
+    @ExceptionHandler(AssigningAdminViaAPIException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Mono<ErrorDto> processItemNotFoundException(AssigningAdminViaAPIException ex) {
+        return Mono.just(new ErrorDto(ex.getMessage()));
+    }
 }

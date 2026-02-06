@@ -1,5 +1,7 @@
 package org.itmo.user.accounter.services;
 
+import org.itmo.user.accounter.model.entities.enums.UserRole;
+import org.itmo.user.accounter.utils.exceptions.AssigningAdminViaAPIException;
 import org.itmo.user.accounter.utils.exceptions.DataIntegrityViolationException;
 import org.itmo.user.accounter.utils.exceptions.ItemNotFoundException;
 import org.itmo.user.accounter.repositories.UserRepository;
@@ -27,6 +29,26 @@ public class UserService implements ReactiveUserDetailsService {
                     throw new DataIntegrityViolationException("User with name " + user.getUsername() + " already exists" );
                 })
                 .switchIfEmpty(userRep.save(user));
+    }
+
+    @Transactional
+    public Mono<User> updateRole(Long id, UserRole role) {
+        if (role == UserRole.ADMIN) {
+            return Mono.error(new AssigningAdminViaAPIException("ADMIN cannot be assigned via web API"));
+        }
+
+        return userRep.findById(id)
+                .switchIfEmpty(Mono.error(new DataIntegrityViolationException("User with id " + id + " was not found")))
+                .filter(user -> user.getRole() != UserRole.ADMIN)
+                .switchIfEmpty(Mono.error(new AssigningAdminViaAPIException("ADMIN cannot be unassigned via web API")))
+                .flatMap(user -> userRep.save(
+                        User.builder()
+                                .id(id)
+                                .role(role)
+                                .password(user.getPassword())
+                                .username(user.getUsername())
+                                .build()
+                ));
     }
 
     @Transactional

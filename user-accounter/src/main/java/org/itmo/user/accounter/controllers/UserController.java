@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import org.itmo.user.accounter.model.dto.ErrorDto;
 import org.itmo.user.accounter.model.dto.UserDto;
+import org.itmo.user.accounter.model.dto.UserSetRoleDto;
 import org.itmo.user.accounter.services.UserService;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.http.HttpStatus;
@@ -83,7 +84,6 @@ public class UserController {
         }
     }
 
-    @Operation(security = { @SecurityRequirement(name = "bearerAuth")})
     @GetMapping("/whoami")
     public Mono<ResponseEntity<UserDto>> currentUser() {
         return userService.getCurrentUser()
@@ -91,9 +91,9 @@ public class UserController {
                 .map(ResponseEntity::ok);
     }
 
-    @PostMapping("/role")
-    public Mono<ResponseEntity<UserDto>> setRoleToUser() {
-        return userService.getCurrentUser()
+    @PutMapping("/role")
+    public Mono<ResponseEntity<UserDto>> setRoleToUser(UserSetRoleDto dto) {
+        return userService.updateRole(dto.id(), dto.role())
                 .map(user -> conversionService.convert(user, UserDto.class))
                 .map(ResponseEntity::ok);
     }
