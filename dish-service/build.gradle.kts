@@ -18,6 +18,9 @@ repositories {
 }
 
 dependencies {
+    implementation("io.jsonwebtoken:jjwt-api:0.13.0")
+    implementation("org.springframework.boot:spring-boot-starter-security:3.5.8")
+
     implementation("org.liquibase:liquibase-core:5.0.1")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("io.projectreactor:reactor-core:3.8.2")
@@ -30,6 +33,8 @@ dependencies {
     implementation("com.playtika.reactivefeign:feign-reactor-spring-cloud-starter:4.2.1")
 
     runtimeOnly("org.postgresql:postgresql")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.13.0")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.13.0")
 
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")

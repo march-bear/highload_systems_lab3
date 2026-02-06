@@ -47,9 +47,10 @@ public class MenuController {
                 }
             )
         })
+    @Parameter(name = "userId", hidden = true)
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Mono<MenuDto> create(@RequestBody MenuCreateDto menuDto) {
+    public Mono<MenuDto> create(@RequestHeader("X-User-Id") Long userId, @RequestBody MenuCreateDto menuDto) {
         return menuService.save(Objects.requireNonNull(conversionService.convert(menuDto, Menu.class)))
                 .flatMap(this::reactiveConvertMenuToMenuDto);
     }
@@ -68,9 +69,10 @@ public class MenuController {
                 }
             )
         })
+    @Parameter(name = "userId", hidden = true)
     @PutMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public Mono<Void> update(@RequestBody MenuDto menuDto) {
+    public Mono<Void> update(@RequestHeader("X-User-Id") Long userId, @RequestBody MenuDto menuDto) {
         menuService.update(Objects.requireNonNull(conversionService.convert(menuDto, Menu.class)));
         return Mono.empty();
     }
@@ -84,11 +86,13 @@ public class MenuController {
                 }
             )
         })
+    @Parameter(name = "userId", hidden = true)
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> delete(
-        @Parameter(description = "ID удаляемого меню", example = "1", required = true)
-        @RequestParam(name="id") Long menuId
+            @RequestHeader("X-User-Id") Long userId,
+            @Parameter(description = "ID удаляемого меню", example = "1", required = true)
+            @RequestParam(name="id") Long menuId
     ) {
         menuService.delete(menuId);
         return Mono.empty();
@@ -111,20 +115,20 @@ public class MenuController {
             )
         })
     @GetMapping
+    @Parameter(name = "userId", hidden = true)
+    @Parameter(name = "userRole", hidden = true)
     public Mono<ResponseEntity<String>> find(
-        @Parameter(description = "ID продукта", example = "1")
-        @RequestParam(required=false) Long id,
-        @Parameter(description = "Имя пользователя", example = "Olya")
-        @RequestParam(required=false) String username,
-        @Parameter(description = "Номер страницы (нумерация с 0)", example = "0")
-        @RequestParam(name="pnumber", required=false) Integer _pageNumber,
-        @Parameter(description = "Размер страницы (по умолчанию 50)", example = "10")
-        @RequestParam(name="psize", required=false) Integer _pageSize
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Role") String role,
+            @Parameter(description = "ID продукта", example = "1")
+            @RequestParam(required=false) Long id,
+            @Parameter(description = "Номер страницы (нумерация с 0)", example = "0")
+            @RequestParam(name="pnumber", required=false) Integer _pageNumber,
+            @Parameter(description = "Размер страницы (по умолчанию 50)", example = "10")
+            @RequestParam(name="psize", required=false) Integer _pageSize
     ) {
         if (id != null) {
             return findById(id);
-        } else if (username != null) {
-            return findAllByUsername(username);
         } else {
             Integer pageNumber = (_pageNumber == null) ? 0 : _pageNumber;
             Integer pageSize = (_pageSize == null) 
@@ -169,9 +173,10 @@ public class MenuController {
                 }
             )
         })
+    @Parameter(name = "userId", hidden = true)
     @PutMapping("/dishes")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public Mono<Void> addDish(@RequestBody MenuDishDto dto) {
+    public Mono<Void> addDish(@RequestHeader("X-User-Id") Long userId, @RequestBody MenuDishDto dto) {
         return menuService.includeDishToMenu(dto.dishId(), dto.menuId());
     }
 
@@ -190,10 +195,12 @@ public class MenuController {
                 }
             )
         })
+    @Parameter(name = "userId", hidden = true)
     @GetMapping("/dishes")
     public Flux<DishDto> getDishes(
-        @Parameter(description = "ID меню", example = "1", required = true)
-        @RequestParam() Long id
+            @RequestHeader("X-User-Id") Long userId,
+            @Parameter(description = "ID меню", example = "1", required = true)
+            @RequestParam() Long id
     ) {
         return menuService.makeListOfDishes(id)
                 .map((it) -> Objects.requireNonNull(conversionService.convert(it, DishDto.class)));
@@ -211,9 +218,10 @@ public class MenuController {
                 }
             )
         })
+    @Parameter(name = "userId", hidden = true)
     @DeleteMapping("/dishes")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public Mono<Void> deleteDish(@RequestBody MenuDishDto dto) {
+    public Mono<Void> deleteDish(@RequestHeader("X-User-Id") Long userId, @RequestBody MenuDishDto dto) {
         menuService.deleteDishFromMenu(dto.dishId(), dto.menuId());
         return Mono.empty();
     }
