@@ -1,5 +1,6 @@
 package org.itmo.user.accounter.config;
 
+import lombok.NonNull;
 import org.itmo.user.accounter.services.JwtService;
 import org.itmo.user.accounter.services.UserService;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -23,7 +24,7 @@ public class JwtAuthenticationFilter implements WebFilter {
     private final UserService userService;
 
     @Override
-    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+    public @NonNull Mono<Void> filter(ServerWebExchange exchange, @NonNull WebFilterChain chain) {
         var authHeader = exchange.getRequest().getHeaders().getFirst(HEADER_NAME);
         if (!StringUtils.hasLength(authHeader) || !authHeader.startsWith(BEARER_PREFIX)) {
             return chain.filter(exchange);

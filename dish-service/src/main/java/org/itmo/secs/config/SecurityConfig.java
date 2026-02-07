@@ -24,6 +24,7 @@ public class SecurityConfig {
     @Bean
     public SecurityWebFilterChain filterChain(ServerHttpSecurity http) {
         return http
+                .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .exceptionHandling(spec -> spec.authenticationEntryPoint(
                         new HttpStatusServerEntryPoint(HttpStatus.UNAUTHORIZED)
                 ))

@@ -6,6 +6,7 @@ import org.itmo.user.accounter.model.entities.User;
 import org.itmo.user.accounter.model.entities.enums.UserRole;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import lombok.AllArgsConstructor;
@@ -16,13 +17,14 @@ import reactor.core.publisher.Mono;
 public class AuthenticationService {
     private final UserService userService;
     private final JwtService jwtService;
+    private final PasswordEncoder passwordEncoder;
     private final ReactiveAuthenticationManager authenticationManager;
 
     public Mono<JwtTokenDto> signUp(UserAuthDto request) {
 
         var user = User.builder()
                 .username(request.username())
-                .password(request.password())
+                .password(passwordEncoder.encode(request.password()))
                 .role(UserRole.USER)
                 .build();
 

@@ -1,6 +1,7 @@
 package org.itmo.user.accounter.controllers;
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.Valid;
 import org.itmo.user.accounter.model.dto.*;
 import org.itmo.user.accounter.services.AuthenticationService;
 import org.itmo.user.accounter.services.UserService;
@@ -43,7 +44,7 @@ public class AuthController {
             )
     })
     @PostMapping("login")
-    public Mono<ResponseEntity<JwtTokenDto>> signIn(@RequestBody UserAuthDto userAuthDto) {
+    public Mono<ResponseEntity<JwtTokenDto>> signIn(@Valid @RequestBody UserAuthDto userAuthDto) {
         return authService.signIn(userAuthDto)
                 .flatMap(
                         dto -> Mono.just(ResponseEntity.status(HttpStatus.CREATED).body(dto))
@@ -64,7 +65,7 @@ public class AuthController {
             )
     })
     @PostMapping("register")
-    public Mono<ResponseEntity<JwtTokenDto>> signUp(@RequestBody UserAuthDto userAuthDto) {
+    public Mono<ResponseEntity<JwtTokenDto>> signUp(@Valid @RequestBody UserAuthDto userAuthDto) {
         return authService.signUp(userAuthDto)
                 .flatMap(
                         dto -> Mono.just(ResponseEntity.status(HttpStatus.CREATED).body(dto))

@@ -25,13 +25,14 @@ public class SecurityConfig {
     @Bean
     public SecurityWebFilterChain filterChain(ServerHttpSecurity http) {
         return http
+                .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .exceptionHandling(spec -> spec.authenticationEntryPoint(
                         new HttpStatusServerEntryPoint(HttpStatus.UNAUTHORIZED)
                 ))
                 .authorizeExchange(auth -> auth
                                 .pathMatchers("/login", "/register").permitAll()
                                 .pathMatchers("/user/whoami").authenticated()
-                                .pathMatchers("user/**").hasRole("ADMIN")
+                                .pathMatchers("/user/**").hasRole("ADMIN")
                                 .pathMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 )
                 .authenticationManager(authenticationManager(userDetailsService))
