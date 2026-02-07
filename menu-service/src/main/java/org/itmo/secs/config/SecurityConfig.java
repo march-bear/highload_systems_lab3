@@ -1,9 +1,9 @@
 package org.itmo.secs.config;
 
-import jakarta.ws.rs.HttpMethod;
 import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
@@ -29,10 +29,14 @@ public class SecurityConfig {
                         new HttpStatusServerEntryPoint(HttpStatus.UNAUTHORIZED)
                 ))
                 .authorizeExchange(auth -> auth
-                                .pathMatchers("/menu/**").authenticated()
-                                .pathMatchers(HttpMethod.GET, HttpMethod.PUT, HttpMethod.DELETE, "/menu").hasRole("MODERATOR")
-                                .pathMatchers(HttpMethod.GET, HttpMethod.PUT, HttpMethod.DELETE, "/menu").hasRole("ADMIN")
-                                .pathMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/menu").authenticated()
+                        .pathMatchers(HttpMethod.PUT, "/menu").authenticated()
+                        .pathMatchers(HttpMethod.DELETE, "/menu").authenticated()
+                        .pathMatchers(HttpMethod.POST, "/menu").hasAuthority("USER")
+
+                        .pathMatchers("/menu/**").hasAuthority("USER")
+
+                        .pathMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 )
                 .authenticationManager(authenticationManager())
                 .addFilterBefore(jwtAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION)
@@ -50,7 +54,7 @@ public class SecurityConfig {
             if (authentication.getDetails() != null && !authentication.getAuthorities().isEmpty()) {
                 return Mono.just(authentication);
             } else {
-                return Mono.empty();
+                return Mono.error(new RuntimeException(authentication.getDetails() + "\n" + authentication.getAuthorities().toString()));
             }
         };
     }

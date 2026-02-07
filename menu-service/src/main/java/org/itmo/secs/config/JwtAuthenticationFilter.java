@@ -67,13 +67,13 @@ public class JwtAuthenticationFilter implements WebFilter {
 
     public boolean isTokenValid(String token) {
         try {
-            Long.parseLong(extractClaim(token, claims -> claims.get("role")).toString());
+            Long.parseLong(extractClaim(token, claims -> claims.get("id")).toString());
         } catch (NumberFormatException e) {
             return false;
         }
 
         return !extractClaim(token, Claims::getExpiration).before(new Date(System.currentTimeMillis()))
-                && extractClaim(token, claims -> claims.get("id")) != null;
+                && extractClaim(token, claims -> claims.get("role")) != null;
     }
 
     private <T> T extractClaim(String token, Function<Claims, T> claimsResolvers) {

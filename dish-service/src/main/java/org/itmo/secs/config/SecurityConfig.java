@@ -1,9 +1,9 @@
 package org.itmo.secs.config;
 
-import jakarta.ws.rs.HttpMethod;
 import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
@@ -31,8 +31,8 @@ public class SecurityConfig {
                 .authorizeExchange(auth -> auth
                                 .pathMatchers(HttpMethod.GET, "/item/**").permitAll()
                                 .pathMatchers(HttpMethod.GET, "/dish/**").permitAll()
-                                .pathMatchers("/item/**").hasRole("ADMIN")
-                                .pathMatchers("/dish/**").hasRole("ADMIN")
+                                .pathMatchers("/item/**").hasAnyAuthority("ADMIN", "MODERATOR")
+                                .pathMatchers("/dish/**").hasAnyAuthority("ADMIN", "MODERATOR")
                                 .pathMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 )
                 .authenticationManager(authenticationManager())

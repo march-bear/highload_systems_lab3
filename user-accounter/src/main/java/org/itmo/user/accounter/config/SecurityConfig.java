@@ -32,7 +32,7 @@ public class SecurityConfig {
                 .authorizeExchange(auth -> auth
                                 .pathMatchers("/login", "/register").permitAll()
                                 .pathMatchers("/user/whoami").authenticated()
-                                .pathMatchers("/user/**").hasRole("ADMIN")
+                                .pathMatchers("/user/**").hasAuthority("ADMIN")
                                 .pathMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 )
                 .authenticationManager(authenticationManager(userDetailsService))
