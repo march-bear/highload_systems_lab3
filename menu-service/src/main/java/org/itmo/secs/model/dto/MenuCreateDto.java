@@ -1,7 +1,6 @@
 package org.itmo.secs.model.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.annotation.Nullable;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
@@ -10,8 +9,6 @@ import java.time.LocalDate;
 public record MenuCreateDto(
     @Schema(description = "Прием пищи (DINNER, LUNCH или BREAKFAST)", type = "string", example = "DINNER")
     String meal,
-    @Schema(description = "ID пользователя", type = "number", example = "1", nullable = true)
-    @Nullable Long userId,
     @Schema(description = "Дата трапезы в формате yyyy-MM-dd", type = "date", example = "2007-01-01")
     @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date
 ) { }

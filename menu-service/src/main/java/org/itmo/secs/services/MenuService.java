@@ -15,7 +15,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.Objects;
 
 @Service
@@ -38,8 +37,9 @@ public class MenuService {
                 .switchIfEmpty(menuRep.save(menu));
     }
 
-    public void update(Menu menu) {
+    public void updateForUser(Menu menu, Long userId) {
         findById(menu.getId())
+                .filter(menu_ -> Objects.equals(menu_.getUserId(), userId))
                 .switchIfEmpty(Mono.error(new ItemNotFoundException("Menu with id " + menu.getId() + " was not found")))
                 .flatMap(existingMenu -> findByKey(menu.getMeal(), menu.getDate(), menu.getUserId())
                     .flatMap(foundMenu -> {
@@ -59,10 +59,11 @@ public class MenuService {
                 .subscribe();
     }
 
-    public void delete(Long id) {
-        menuRep.findById(id)
+    public Mono<Void> deleteForUser(Long id, Long userId) {
+        return menuRep.findById(id)
+                .filter(menu -> Objects.equals(menu.getUserId(), userId))
                 .switchIfEmpty(Mono.error(new ItemNotFoundException("Menu with id " + id + " was not found")))
-                .flatMap(x -> menuRep.deleteById(id)).subscribe();
+                .flatMap(x -> menuRep.deleteById(id));
     }
 
     public Mono<Menu> findById(Long id) {
@@ -73,8 +74,9 @@ public class MenuService {
         return  menuRep.findByMealAndDateAndUserId(meal, date, userId);
     }
 
-    public Mono<Void> includeDishToMenu(Long dishId, Long menuId) {
+    public Mono<Void> includeDishToMenuForUser(Long dishId, Long menuId, Long userId) {
         return menuRep.findById(menuId)
+                .filter(menu -> Objects.equals(menu.getUserId(), userId))
                 .switchIfEmpty(Mono.error(new ItemNotFoundException("Menu with id " + menuId + " was not found")))
                 .flatMap(menu -> dishServiceClient.getById(dishId)
                         .onErrorResume(e -> {
@@ -88,15 +90,17 @@ public class MenuService {
                 .then();
     }
 
-    public void deleteDishFromMenu(Long dishId, Long menuId) {
+    public void deleteDishFromMenuForUser(Long dishId, Long menuId, Long userId) {
         findById(menuId)
+                .filter(menu -> Objects.equals(menu.getUserId(), userId))
                 .switchIfEmpty(Mono.error(new ItemNotFoundException("Menu with id " + menuId.toString() + " was not found")))
                 .flatMap(menu -> menuDishesService.deleteByIds(menuId, dishId))
                 .subscribe();
     }
 
-    public Flux<DishDto> makeListOfDishes(Long menuId) {
+    public Flux<DishDto> makeListOfDishesForUser(Long menuId, Long userId) {
         return menuRep.findById(menuId)
+                .filter(menu -> Objects.equals(menu.getUserId(), userId))
                 .switchIfEmpty(Mono.error(new ItemNotFoundException("Menu with id " + menuId + " was not found")))
                 .flatMapMany(x -> menuDishesService.getDishesIdByMenuId(x.getId()))
                 .flatMap(dishId -> dishServiceClient.getById(dishId)
@@ -109,12 +113,19 @@ public class MenuService {
                         }));
     }
 
+    public Flux<Menu> findAllByUserId(int page, int size, Long userId) {
+        return menuRep.findAll()
+                .filter(menu -> Objects.equals(menu.getUserId(), userId))
+                .skip((long) page * size)
+                .limitRate(size);
+    }
+
     public Flux<Menu> findAll(int page, int size) {
         return menuRep.findAll().skip((long) page * size).limitRate(size);
     }
 
-    public Flux<Menu> findAllByUsername(String username) {
-        return userServiceClient.getByName(username)
+    public Flux<Menu> findAllByUsername(String authHeader, String username) {
+        return userServiceClient.getByName(authHeader, username)
                 .onErrorResume(e -> {
                     if (e instanceof ServiceUnavailableException) {
                         return Mono.error(e);

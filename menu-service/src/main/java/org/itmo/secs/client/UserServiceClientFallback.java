@@ -7,7 +7,7 @@ import reactor.core.publisher.Mono;
 public class UserServiceClientFallback implements UserServiceClient {
 
     @Override
-    public Mono<UserDto> getByName(String username) {
+    public Mono<UserDto> getByName(String authorizationHeader, String username) {
         return Mono.error(new ServiceUnavailableException("User Service is unavailable now, cannot find " + username + "'s menus"));
     }
 }

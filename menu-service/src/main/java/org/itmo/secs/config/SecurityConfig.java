@@ -24,6 +24,7 @@ public class SecurityConfig {
     @Bean
     public SecurityWebFilterChain filterChain(ServerHttpSecurity http) {
         return http
+                .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .exceptionHandling(spec -> spec.authenticationEntryPoint(
                         new HttpStatusServerEntryPoint(HttpStatus.UNAUTHORIZED)
                 ))
@@ -46,7 +47,7 @@ public class SecurityConfig {
     @Bean
     public ReactiveAuthenticationManager authenticationManager() {
         return authentication -> {
-            if (authentication.getPrincipal() != null && !authentication.getAuthorities().isEmpty()) {
+            if (authentication.getDetails() != null && !authentication.getAuthorities().isEmpty()) {
                 return Mono.just(authentication);
             } else {
                 return Mono.empty();

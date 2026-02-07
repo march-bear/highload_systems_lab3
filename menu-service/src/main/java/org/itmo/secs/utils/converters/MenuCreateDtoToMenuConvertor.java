@@ -17,7 +17,6 @@ public class MenuCreateDtoToMenuConvertor implements Converter<MenuCreateDto, Me
     public Menu convert(MenuCreateDto menuDto) {
         Menu menu = new Menu();
 
-        menu.setUserId(menuDto.userId());
         menu.setDate(menuDto.date());
         try {
             menu.setMeal(Meal.valueOf(menuDto.meal().trim().toUpperCase()));

@@ -15,6 +15,7 @@ import org.itmo.secs.services.JsonConvService;
 import org.itmo.secs.services.MenuService;
 import org.itmo.secs.utils.conf.PagingConf;
 import org.itmo.secs.utils.converters.CCPF;
+import org.itmo.secs.utils.exceptions.AccessDeniedException;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -47,11 +48,15 @@ public class MenuController {
                 }
             )
         })
-    @Parameter(name = "userId", hidden = true)
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Mono<MenuDto> create(@RequestHeader("X-User-Id") Long userId, @RequestBody MenuCreateDto menuDto) {
-        return menuService.save(Objects.requireNonNull(conversionService.convert(menuDto, Menu.class)))
+    public Mono<MenuDto> create(
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
+            @RequestBody MenuCreateDto menuDto
+    ) {
+        Menu menu = Objects.requireNonNull(conversionService.convert(menuDto, Menu.class));
+        menu.setId(userId);
+        return menuService.save(menu)
                 .flatMap(this::reactiveConvertMenuToMenuDto);
     }
 
@@ -69,11 +74,13 @@ public class MenuController {
                 }
             )
         })
-    @Parameter(name = "userId", hidden = true)
     @PutMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public Mono<Void> update(@RequestHeader("X-User-Id") Long userId, @RequestBody MenuDto menuDto) {
-        menuService.update(Objects.requireNonNull(conversionService.convert(menuDto, Menu.class)));
+    public Mono<Void> update(
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
+            @RequestBody MenuDto menuDto
+    ) {
+        menuService.updateForUser(Objects.requireNonNull(conversionService.convert(menuDto, Menu.class)), userId);
         return Mono.empty();
     }
 
@@ -86,16 +93,14 @@ public class MenuController {
                 }
             )
         })
-    @Parameter(name = "userId", hidden = true)
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> delete(
-            @RequestHeader("X-User-Id") Long userId,
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
             @Parameter(description = "ID удаляемого меню", example = "1", required = true)
             @RequestParam(name="id") Long menuId
     ) {
-        menuService.delete(menuId);
-        return Mono.empty();
+        return menuService.deleteForUser(menuId, userId);
     }
 
     @Operation(summary = "Найти меню", description = "При указании id ищет продукт по id, иначе возвращает список продуктов по указанной странице")
@@ -115,47 +120,64 @@ public class MenuController {
             )
         })
     @GetMapping
-    @Parameter(name = "userId", hidden = true)
-    @Parameter(name = "userRole", hidden = true)
     public Mono<ResponseEntity<String>> find(
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-User-Role") String role,
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
+            @Parameter(hidden = true) @RequestHeader("X-User-Role") String role,
+            @Parameter(hidden = true) @RequestHeader("Authorization") String authHeader,
             @Parameter(description = "ID продукта", example = "1")
             @RequestParam(required=false) Long id,
+            @Parameter(description = "Имя пользователя", example = "Олег")
+            @RequestParam(required=false) String username,
             @Parameter(description = "Номер страницы (нумерация с 0)", example = "0")
             @RequestParam(name="pnumber", required=false) Integer _pageNumber,
             @Parameter(description = "Размер страницы (по умолчанию 50)", example = "10")
             @RequestParam(name="psize", required=false) Integer _pageSize
     ) {
         if (id != null) {
-            return findById(id);
-        } else {
+            return findById(id, userId, role);
+        } else if (username != null) {
+            if (Objects.equals(role, "ADMIN") || Objects.equals(role, "MODERATOR")) {
+                return findAllByUsername(authHeader, username);
+            } else {
+                return Mono.error(
+                        new AccessDeniedException("For USER parameter username can be only current user's name")
+                );
+            }
+        } else{
             Integer pageNumber = (_pageNumber == null) ? 0 : _pageNumber;
             Integer pageSize = (_pageSize == null) 
                 ? pagingConf.getDefaultPageSize()
                 : (_pageSize > pagingConf.getMaxPageSize())
                     ? pagingConf.getMaxPageSize()
                     : _pageSize;
-            return findAll(pageNumber, pageSize);
+            return findAll(pageNumber, pageSize, userId, role);
         }
     }
 
-    public Mono<ResponseEntity<String>> findAllByUsername(String username) {
-        return menuService.findAllByUsername(username)
+    public Mono<ResponseEntity<String>> findAllByUsername(String authHeader, String username) {
+        return menuService.findAllByUsername(authHeader, username)
                 .flatMap(this::reactiveConvertMenuToMenuDto)
                 .collectList()
                 .map(menusDto -> ResponseEntity.ok(jsonConvService.conv(menusDto)));
     }
 
-    public Mono<ResponseEntity<String>> findAll(Integer pageNumber, Integer pageSize) {
-        return menuService.findAll(pageNumber, pageSize)
-        .flatMap(this::reactiveConvertMenuToMenuDto)
-        .collectList()
-        .map(menusDto -> ResponseEntity.ok(jsonConvService.conv(menusDto)));
+    public Mono<ResponseEntity<String>> findAll(Integer pageNumber, Integer pageSize, Long userId, String role) {
+        if (Objects.equals(role, "ADMIN") || Objects.equals(role, "MODERATOR")) {
+            return menuService.findAll(pageNumber, pageSize)
+                    .flatMap(this::reactiveConvertMenuToMenuDto)
+                    .collectList()
+                    .map(menusDto -> ResponseEntity.ok(jsonConvService.conv(menusDto)));
+        } else {
+            return menuService.findAllByUserId(pageNumber, pageSize, userId)
+                    .flatMap(this::reactiveConvertMenuToMenuDto)
+                    .collectList()
+                    .map(menusDto -> ResponseEntity.ok(jsonConvService.conv(menusDto)));
+        }
     }
 
-    public Mono<ResponseEntity<String>> findById(Long id) {
+    public Mono<ResponseEntity<String>> findById(Long id, Long userId, String role) {
         return menuService.findById(id)
+                .filter(menu -> Objects.equals(menu.getUserId(), userId) || Objects.equals(role, "ADMIN") || Objects.equals(role, "MODERATOR"))
                 .flatMap(this::reactiveConvertMenuToMenuDto)
                 .map(dto -> ResponseEntity.ok(jsonConvService.conv(dto)))
                 .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
@@ -173,11 +195,13 @@ public class MenuController {
                 }
             )
         })
-    @Parameter(name = "userId", hidden = true)
     @PutMapping("/dishes")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public Mono<Void> addDish(@RequestHeader("X-User-Id") Long userId, @RequestBody MenuDishDto dto) {
-        return menuService.includeDishToMenu(dto.dishId(), dto.menuId());
+    public Mono<Void> addDish(
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
+            @RequestBody MenuDishDto dto
+    ) {
+        return menuService.includeDishToMenuForUser(dto.dishId(), dto.menuId(), userId);
     }
 
     @Operation(summary = "Получить список блюд в составе меню", description = "При наличии меню с указанным ip в базе возвращает список блюд в нем")
@@ -195,14 +219,13 @@ public class MenuController {
                 }
             )
         })
-    @Parameter(name = "userId", hidden = true)
     @GetMapping("/dishes")
     public Flux<DishDto> getDishes(
-            @RequestHeader("X-User-Id") Long userId,
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
             @Parameter(description = "ID меню", example = "1", required = true)
             @RequestParam() Long id
     ) {
-        return menuService.makeListOfDishes(id)
+        return menuService.makeListOfDishesForUser(id, userId)
                 .map((it) -> Objects.requireNonNull(conversionService.convert(it, DishDto.class)));
     }
 
@@ -218,17 +241,19 @@ public class MenuController {
                 }
             )
         })
-    @Parameter(name = "userId", hidden = true)
     @DeleteMapping("/dishes")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public Mono<Void> deleteDish(@RequestHeader("X-User-Id") Long userId, @RequestBody MenuDishDto dto) {
-        menuService.deleteDishFromMenu(dto.dishId(), dto.menuId());
+    public Mono<Void> deleteDish(
+            @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
+            @RequestBody MenuDishDto dto
+    ) {
+        menuService.deleteDishFromMenuForUser(dto.dishId(), dto.menuId(), userId);
         return Mono.empty();
     }
 
     public Mono<MenuDto> reactiveConvertMenuToMenuDto(Menu menu) {
         CCPF ccpf = new CCPF(0, 0, 0, 0);
-        return menuService.makeListOfDishes(menu.getId())
+        return menuService.makeListOfDishesForUser(menu.getId(), menu.getUserId())
                 .reduce(ccpf, (acc, curr) -> {
                             acc.setCalories(
                                     acc.getCalories() + curr.calories()

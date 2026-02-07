@@ -5,6 +5,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.AllArgsConstructor;
+import lombok.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -23,7 +24,6 @@ import java.util.List;
 import java.util.function.Function;
 
 @Component
-@AllArgsConstructor
 public class JwtAuthenticationFilter implements WebFilter {
     @Value("${token.signing.key}")
     private String jwtSigningKey;
@@ -32,7 +32,7 @@ public class JwtAuthenticationFilter implements WebFilter {
     public static final String HEADER_NAME = "Authorization";
 
     @Override
-    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+    public @NonNull Mono<Void> filter(@NonNull ServerWebExchange exchange, @NonNull WebFilterChain chain) {
         exchange.getRequest().getHeaders().remove("X-User-Id");
         exchange.getRequest().getHeaders().remove("X-User-Role");
 
