@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.itmo.secs.model.dto.*;
 import org.itmo.secs.model.entities.Menu;
@@ -52,10 +53,10 @@ public class MenuController {
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<MenuDto> create(
             @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
-            @RequestBody MenuCreateDto menuDto
+            @Valid @RequestBody MenuCreateDto menuDto
     ) {
         Menu menu = Objects.requireNonNull(conversionService.convert(menuDto, Menu.class));
-        menu.setId(userId);
+        menu.setUserId(userId);
         return menuService.save(menu)
                 .flatMap(this::reactiveConvertMenuToMenuDto);
     }
@@ -78,10 +79,9 @@ public class MenuController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> update(
             @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
-            @RequestBody MenuDto menuDto
+            @Valid @RequestBody MenuUpdateDto menuDto
     ) {
-        menuService.updateForUser(Objects.requireNonNull(conversionService.convert(menuDto, Menu.class)), userId);
-        return Mono.empty();
+        return menuService.updateForUser(Objects.requireNonNull(conversionService.convert(menuDto, Menu.class)), userId);
     }
 
     @Operation(summary = "Удалить меню", description = "Удалить меню по id")
@@ -97,10 +97,15 @@ public class MenuController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> delete(
             @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
+            @Parameter(hidden = true) @RequestHeader("X-User-Role") String role,
             @Parameter(description = "ID удаляемого меню", example = "1", required = true)
             @RequestParam(name="id") Long menuId
     ) {
-        return menuService.deleteForUser(menuId, userId);
+        if (Objects.equals(role, "USER")) {
+            return menuService.deleteForUser(menuId, userId);
+        } else {
+            return menuService.delete(menuId);
+        }
     }
 
     @Operation(summary = "Найти меню", description = "При указании id ищет продукт по id, иначе возвращает список продуктов по указанной странице")
@@ -140,7 +145,7 @@ public class MenuController {
                 return findAllByUsername(authHeader, username);
             } else {
                 return Mono.error(
-                        new AccessDeniedException("For USER parameter username can be only current user's name")
+                        new AccessDeniedException("For USER parameter `username` unavailable")
                 );
             }
         } else{
@@ -247,8 +252,7 @@ public class MenuController {
             @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
             @RequestBody MenuDishDto dto
     ) {
-        menuService.deleteDishFromMenuForUser(dto.dishId(), dto.menuId(), userId);
-        return Mono.empty();
+        return menuService.deleteDishFromMenuForUser(dto.dishId(), dto.menuId(), userId);
     }
 
     public Mono<MenuDto> reactiveConvertMenuToMenuDto(Menu menu) {

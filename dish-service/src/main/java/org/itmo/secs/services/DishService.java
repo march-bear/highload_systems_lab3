@@ -16,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Flux;
 
+import java.util.Objects;
+
 @Service
 @AllArgsConstructor
 public class DishService {
@@ -50,17 +52,24 @@ public class DishService {
         Dish dish = dishRepository.findById(dishId).orElse(null);
 
         if (dish == null) {
-            throw new ItemNotFoundException("Dish with id " + itemId + " was not found");
+            return Mono.error( new ItemNotFoundException("Dish with id " + dishId + " was not found"));
         }
 
         return itemService.findById(itemId)
                 .switchIfEmpty(Mono.error(new ItemNotFoundException("Item with id " + itemId + " was not found")))
-                .map(item -> itemDishService.delete(item, dish)).then();
+                .flatMap(item -> itemDishService.delete(item, dish)).then();
     }
 
     @Transactional
     public Mono<Void> updateName(Dish dish) {
-        return findById(dish.getId())
+        return findByName(dish.getName())
+                .flatMap(x -> {
+                    if (!Objects.equals(x.getId(), dish.getId())) {
+                        return Mono.error(new DataIntegrityViolationException("Dish with name " + dish.getName() + " already exist"));
+                    } else {
+                        return findById(dish.getId());
+                    }
+                })
                 .switchIfEmpty(Mono.error(new ItemNotFoundException("Dish with id " + dish.getId() + " was not found")))
                 .map(x -> dishRepository.save(dish)).then();
     }
@@ -87,7 +96,9 @@ public class DishService {
 
     @Transactional
     public Flux<Pair<Item, Integer>> makeListOfItems(Long dishId) {
-        return itemDishService.findAllByDishId(dishId)
+        return findById(dishId)
+                .switchIfEmpty(Mono.error(new ItemNotFoundException("Dish with id " + dishId + " was not found")))
+                .flatMapMany(it -> itemDishService.findAllByDishId(dishId))
                 .map(itemDish -> Pair.of(itemDish.getItem(), itemDish.getCount()));
     }
 

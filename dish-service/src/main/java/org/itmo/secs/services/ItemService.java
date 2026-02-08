@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Flux;
 
+import java.util.Objects;
+
 @Service
 @AllArgsConstructor
 public class ItemService {
@@ -34,10 +36,16 @@ public class ItemService {
     
     @Transactional(isolation=Isolation.SERIALIZABLE)
     public Mono<Void> update(Item item) {
-        findById(item.getId())
-            .switchIfEmpty(Mono.error(new ItemNotFoundException("Item with id " + item.getId() + " was not found"))) 
-            .map(x -> itemRepository.save(item)).subscribe();
-        return Mono.empty();
+        return findByName(item.getName())
+                .flatMap(x -> {
+                    if (!Objects.equals(x.getId(), item.getId())) {
+                        return Mono.error(new DataIntegrityViolationException("Item with name " + item.getName() + " already exist"));
+                    } else {
+                        return findById(item.getId());
+                    }
+                })
+                .switchIfEmpty(Mono.error(new ItemNotFoundException("Item with id " + item.getId() + " was not found")))
+                .map(x -> itemRepository.save(item)).then();
     }
 
     public Mono<Item> findById(Long id) {

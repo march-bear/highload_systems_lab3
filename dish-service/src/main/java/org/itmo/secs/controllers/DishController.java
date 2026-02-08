@@ -1,5 +1,6 @@
 package org.itmo.secs.controllers;
 
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 
 import org.itmo.secs.model.dto.*;
@@ -50,7 +51,7 @@ public class DishController {
         })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Mono<DishDto> create(@RequestBody DishCreateDto dishCreateDto) {
+    public Mono<DishDto> create(@Valid @RequestBody DishCreateDto dishCreateDto) {
         return dishService.save(Objects.requireNonNull(conversionService.convert(dishCreateDto, Dish.class)))
             .flatMap(this::reactiveConvertDishToDishDto);
     }
@@ -70,7 +71,8 @@ public class DishController {
             )
         })
     @PutMapping
-    public Mono<Void> updateName(@RequestBody DishUpdateNameDto dishUpdateNameDto) {
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> updateName(@Valid @RequestBody DishUpdateNameDto dishUpdateNameDto) {
         return dishService.updateName(Objects.requireNonNull(conversionService.convert(dishUpdateNameDto, Dish.class)));
     }
 
@@ -139,7 +141,7 @@ public class DishController {
 
     public Mono<ResponseEntity<String>> findAll(Integer pageNumber, Integer pageSize) {
         return dishService.findAll(pageNumber, pageSize)
-                .map(this::reactiveConvertDishToDishDto)
+                .flatMap(this::reactiveConvertDishToDishDto)
                 .collectList()
                 .map(
                         (dishesDto) -> ResponseEntity.ok().header("Content-Type", "application/json").body(jsonConvService.conv(dishesDto))
@@ -160,7 +162,7 @@ public class DishController {
         })
     @PutMapping("/items")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public Mono<Void> addItem(@RequestBody DishAddItemDto dishAddItemDto) {
+    public Mono<Void> addItem(@Valid @RequestBody DishAddItemDto dishAddItemDto) {
         return dishService.addItem(dishAddItemDto.itemId(), dishAddItemDto.dishId(), dishAddItemDto.count());
     }
 

@@ -47,13 +47,13 @@ public class AuthController {
     public Mono<ResponseEntity<JwtTokenDto>> signIn(@Valid @RequestBody UserAuthDto userAuthDto) {
         return authService.signIn(userAuthDto)
                 .flatMap(
-                        dto -> Mono.just(ResponseEntity.status(HttpStatus.CREATED).body(dto))
+                        dto -> Mono.just(ResponseEntity.status(HttpStatus.OK).body(dto))
                 );
     }
 
     @Operation(summary = "Регистрация", description = "Создается новый пользователь с ролью USER")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Регистрация прошла успешно",
+            @ApiResponse(responseCode = "201", description = "Регистрация прошла успешно",
                     content = {
                             @Content(mediaType = "application/json", schema = @Schema(implementation = JwtTokenDto.class))
                     }

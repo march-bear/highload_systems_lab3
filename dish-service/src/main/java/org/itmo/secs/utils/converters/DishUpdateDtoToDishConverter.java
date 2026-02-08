@@ -7,6 +7,7 @@ import org.itmo.secs.services.DishService;
 import org.itmo.secs.utils.exceptions.ItemNotFoundException;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 
 @Component
 @AllArgsConstructor
@@ -14,12 +15,14 @@ public class DishUpdateDtoToDishConverter implements Converter<DishUpdateNameDto
     private final DishService dishService;
     @Override
     public Dish convert(DishUpdateNameDto dishUpdateNameDto) {
-        Dish ret = dishService.findById(dishUpdateNameDto.id())
-                .blockOptional()
-                .orElseThrow(() ->
-                        new ItemNotFoundException("Dish with id " + dishUpdateNameDto.id() + " was not found"));
+        Dish dish = new Dish();
+        dishService.findById(dishUpdateNameDto.id())
+                .switchIfEmpty(Mono.error(new ItemNotFoundException("Dish with id " + dishUpdateNameDto.id() + " was not found")))
+                .subscribe(it -> {
+                    dish.setId(it.getId());
+                    dish.setName(dishUpdateNameDto.name());
+                });
 
-        ret.setName(dishUpdateNameDto.name());
-        return ret;
+        return dish;
     }
 }

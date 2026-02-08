@@ -12,24 +12,21 @@ import jakarta.validation.ConstraintViolationException;
 import org.springframework.web.reactive.result.method.annotation.ResponseEntityExceptionHandler;
 
 @RestControllerAdvice
-public class ExceptionTranslator extends ResponseEntityExceptionHandler {
+public class ExceptionTranslator {
     @ExceptionHandler(ItemNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    @ResponseBody
     public ErrorDto processItemNotFoundException(ItemNotFoundException ex) {
         return new ErrorDto(ex.getMessage());
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ResponseBody
     public ErrorDto processItemNotFoundException(DataIntegrityViolationException ex) {
         return new ErrorDto(ex.getMessage());
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ResponseBody
     public ErrorDto processConstraintViolationException(ConstraintViolationException ex) {
         return new ErrorDto("Field validation failed");
     }

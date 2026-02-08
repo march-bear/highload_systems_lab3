@@ -36,12 +36,12 @@ public class ItemDishService {
     }
 
     @Transactional
-    public Mono<ItemDish> delete(Item item, Dish dish) {
+    public Mono<Void> delete(Item item, Dish dish) {
         return findById(item.getId(), dish.getId())
             .switchIfEmpty(Mono.error(new ItemNotFoundException("Item with id " + item.getId() + " was not found in Dish with id " + dish.getId())))
-            .map(x -> {
+            .flatMap(x -> {
                 itemDishRepository.delete(x);
-                return x;
+                return Mono.empty();
             });
     }
 

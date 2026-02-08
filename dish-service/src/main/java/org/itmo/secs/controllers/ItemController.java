@@ -1,5 +1,6 @@
 package org.itmo.secs.controllers;
 
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 
 import org.itmo.secs.model.dto.*;
@@ -48,7 +49,7 @@ public class ItemController {
         })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Mono<ItemDto> create(@RequestBody ItemCreateDto itemCreateDto) {
+    public Mono<ItemDto> create(@Valid @RequestBody ItemCreateDto itemCreateDto) {
         return itemService.save(Objects.requireNonNull(conversionService.convert(itemCreateDto, Item.class)))
                 .map(item ->
                         Objects.requireNonNull(conversionService.convert(item, ItemDto.class))
@@ -71,7 +72,7 @@ public class ItemController {
         })
     @PutMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public Mono<Void> update(@RequestBody ItemUpdateDto itemUpdateDto) {
+    public Mono<Void> update(@Valid @RequestBody ItemUpdateDto itemUpdateDto) {
         return itemService.update(Objects.requireNonNull(conversionService.convert(itemUpdateDto, Item.class)));
     }
 

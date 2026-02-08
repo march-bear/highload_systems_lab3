@@ -20,6 +20,7 @@ public class ItemUpdateDtoToItemConverter implements Converter<ItemUpdateDto, It
         itemService.findById(itemUpdateDto.id())
             .switchIfEmpty(Mono.error(new ItemNotFoundException("Item with id " + itemUpdateDto.id() + " was not found")))
                 .subscribe(x -> {
+                    ret.setId(itemUpdateDto.id());
                     ret.setName(itemUpdateDto.name());
                     ret.setCalories(itemUpdateDto.calories());
                     ret.setCarbs(itemUpdateDto.carbs());

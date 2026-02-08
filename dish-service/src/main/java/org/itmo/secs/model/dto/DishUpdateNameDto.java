@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Size;
 public record DishUpdateNameDto(
     @Schema(description = "ID продукта", type = "number", example = "1")
     Long id,
-    @Schema(description = "Имя продукта", type = "string", example = "Гречка по-крестьянски")
+    @Schema(description = "Имя продукта (3-20 симв)", type = "string", example = "Гречка по-крестьянски")
     @Size(min = 3, max = 30)
     String name
 ) { }

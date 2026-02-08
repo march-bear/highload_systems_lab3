@@ -8,8 +8,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
 
-@Schema(name = "Объект меню", description = "Содержит основные поля меню с агрегацией КБЖУ, используется при отображении меню")
-public record MenuDto(
+@Schema(name = "Объект для обновления меню", description = "Содержит основные поля меню и его ID")
+public record MenuUpdateDto(
     @Schema(description = "ID меню", type = "number", example = "1")
     Long id,
     @Schema(description = "Дата трапезы в формате yyyy-MM-dd", type = "date", example = "2007-01-01")
@@ -17,17 +17,5 @@ public record MenuDto(
     @JsonSerialize(using = LocalDateSerializer.class)
     LocalDate date,
     @Schema(description = "Прием пищи (DINNER, LUNCH или BREAKFAST)", type = "string", example = "BREAKFAST")
-    String meal,
-    @Schema(description = "Ккал (сумма)", type = "number", example = "220")
-    @PositiveOrZero
-    Integer calories,
-    @Schema(description = "Углеводы (сумма), г", type = "number", example = "53")
-    @PositiveOrZero
-    Integer carbs,
-    @Schema(description = "Белки (сумма), г", type = "number", example = "7")
-    @PositiveOrZero
-    Integer protein,
-    @Schema(description = "Жиры (сумма), г", type = "number", example = "1")
-    @PositiveOrZero
-    Integer fats
+    String meal
 ) { }

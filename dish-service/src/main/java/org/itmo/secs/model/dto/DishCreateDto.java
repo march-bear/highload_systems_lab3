@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Size;
 
 @Schema(name = "Объект для создания нового блюда", description = "Содержит имя создаваемого блюда")
 public record DishCreateDto(
-    @Schema(description = "Имя блюда", type = "string", example = "Гречка по-купечески")
+    @Schema(description = "Имя блюда (3-20 символов)", type = "string", example = "Гречка по-купечески")
     @Size(min = 3, max = 30)
     String name
 ) { }

@@ -9,7 +9,7 @@ public record DishAddItemDto(
     Long itemId,
     @Schema(description = "ID блюда", type = "number", example = "2")
     Long dishId,
-    @Schema(description = "Граммовка продукта в блюде", type = "number", example = "100")
+    @Schema(description = "Граммовка продукта в блюде (> 0)", type = "number", example = "100")
     @Positive
     Integer count
 ) { }

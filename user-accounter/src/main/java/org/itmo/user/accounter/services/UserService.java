@@ -55,6 +55,8 @@ public class UserService implements ReactiveUserDetailsService {
     public Mono<Void> deleteById(Long id) {
         return userRep.findById(id)
                 .switchIfEmpty(Mono.error(new ItemNotFoundException("User with id " + id + " was not found")))
+                .filter(user -> user.getRole() != UserRole.ADMIN)
+                .switchIfEmpty(Mono.error(new AssigningAdminViaAPIException("ADMIN cannot be deleted via web API")))
                 .flatMap(user -> userRep.deleteById(id));
     }
 
