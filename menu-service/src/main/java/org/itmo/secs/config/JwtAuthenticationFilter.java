@@ -1,12 +1,18 @@
 package org.itmo.secs.config;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import lombok.AllArgsConstructor;
 import lombok.NonNull;
+import org.itmo.secs.model.dto.ErrorDto;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
@@ -19,6 +25,7 @@ import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
 import java.util.function.Function;
@@ -41,24 +48,36 @@ public class JwtAuthenticationFilter implements WebFilter {
             return chain.filter(exchange);
         }
 
-        var jwt = authHeader.substring(BEARER_PREFIX.length());
-        var username = extractClaim(jwt, Claims::getSubject);
+        try {
+            var jwt = authHeader.substring(BEARER_PREFIX.length());
+            var username = extractClaim(jwt, Claims::getSubject);
 
-        if (StringUtils.hasLength(username) && SecurityContextHolder.getContext().getAuthentication() == null) {
-            if (isTokenValid(jwt)) {
-                String id = extractClaim(jwt, claims -> claims.get("id")).toString();
-                String role = extractClaim(jwt, claims -> claims.get("role")).toString();
+            if (StringUtils.hasLength(username) && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    if (isTokenValid(jwt)) {
+                        String id = extractClaim(jwt, claims -> claims.get("id")).toString();
+                        String role = extractClaim(jwt, claims -> claims.get("role")).toString();
 
-                exchange.getRequest().getHeaders().add("X-User-Id", id);
-                exchange.getRequest().getHeaders().add("X-User-Role", role);
+                        exchange.getRequest().getHeaders().add("X-User-Id", id);
+                        exchange.getRequest().getHeaders().add("X-User-Role", role);
 
-                return chain.filter(exchange).contextWrite(ReactiveSecurityContextHolder.withAuthentication(
-                        new UsernamePasswordAuthenticationToken(
-                                username,
-                                null,
-                                List.of(new SimpleGrantedAuthority(role))
-                        )
-                ));
+                        return chain.filter(exchange).contextWrite(ReactiveSecurityContextHolder.withAuthentication(
+                                new UsernamePasswordAuthenticationToken(
+                                        username,
+                                        null,
+                                        List.of(new SimpleGrantedAuthority(role))
+                                )
+                        ));
+                    }
+            }
+        } catch (ExpiredJwtException ex) {
+            ObjectWriter writer = new ObjectMapper().writer().withDefaultPrettyPrinter();
+            try {
+                String body = writer.writeValueAsString(new ErrorDto("Token was expired"));
+                DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(body.getBytes(StandardCharsets.UTF_8));
+                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                return exchange.getResponse().writeWith(Mono.just(buffer));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
             }
         }
 
