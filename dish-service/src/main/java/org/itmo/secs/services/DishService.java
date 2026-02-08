@@ -28,7 +28,7 @@ public class DishService {
     @Transactional
     public Mono<Dish> save(Dish dish) {
         if (dishRepository.findByName(dish.getName()).isPresent()) {
-            throw new DataIntegrityViolationException("Dish with name " + dish.getName() + " already exist");
+             return Mono.error(new DataIntegrityViolationException("Dish with name " + dish.getName() + " already exist"));
         }
 
         return Mono.just(dishRepository.save(dish));
@@ -87,7 +87,7 @@ public class DishService {
     @Transactional
     public Mono<Void> delete(Long id) {
         if (dishRepository.findById(id).isEmpty()) {
-            throw new ItemNotFoundException("Dish with id " + id + " was not found");
+            return Mono.error(new ItemNotFoundException("Dish with id " + id + " was not found"));
         }
 
         dishRepository.deleteById(id);
