@@ -9,7 +9,10 @@ import reactivefeign.spring.config.ReactiveFeignClient;
 import reactor.core.publisher.Mono;
 
 @Component
-@ReactiveFeignClient(name = "dish-service", fallback = DishServiceClientFallback.class)
+@ReactiveFeignClient(
+        name = "dish-service",
+        configuration = DishServiceClientConfig.class
+)
 @ResponseBody
 public interface DishServiceClient {
     @GetMapping("/dish")

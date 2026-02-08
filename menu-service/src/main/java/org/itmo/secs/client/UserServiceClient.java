@@ -10,7 +10,10 @@ import reactivefeign.spring.config.ReactiveFeignClient;
 import reactor.core.publisher.Mono;
 
 @Component
-@ReactiveFeignClient(name = "user-accounter", fallback = UserServiceClientFallback.class)
+@ReactiveFeignClient(
+        name = "user-accounter",
+        configuration = UserServiceClientConfig.class
+)
 @ResponseBody
 public interface UserServiceClient {
     @GetMapping("/user")
