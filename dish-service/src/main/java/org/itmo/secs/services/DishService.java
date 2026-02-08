@@ -2,6 +2,7 @@ package org.itmo.secs.services;
 
 import lombok.AllArgsConstructor;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.util.Pair;
@@ -20,6 +21,7 @@ import java.util.Objects;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class DishService {
     private final ItemDishService itemDishService;
     private final DishRepository dishRepository;
@@ -62,15 +64,18 @@ public class DishService {
 
     @Transactional
     public Mono<Void> updateName(Dish dish) {
-        return findByName(dish.getName())
-                .flatMap(x -> {
-                    if (!Objects.equals(x.getId(), dish.getId())) {
-                        return Mono.error(new DataIntegrityViolationException("Dish with name " + dish.getName() + " already exist"));
-                    } else {
-                        return findById(dish.getId());
-                    }
-                })
+        return findById(dish.getId())
                 .switchIfEmpty(Mono.error(new ItemNotFoundException("Dish with id " + dish.getId() + " was not found")))
+                .flatMap(orig -> findByName(dish.getName())
+                        .flatMap(x -> {
+                            if (!Objects.equals(x.getId(), dish.getId())) {
+                                return Mono.error(new DataIntegrityViolationException("Dish with name " + dish.getName() + " already exist"));
+                            } else {
+                                return Mono.just(orig);
+                            }
+                        })
+                        .switchIfEmpty(Mono.just(orig))
+                )
                 .map(x -> dishRepository.save(dish)).then();
     }
 

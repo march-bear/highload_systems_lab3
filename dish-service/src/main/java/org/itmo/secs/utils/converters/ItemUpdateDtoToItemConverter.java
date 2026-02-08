@@ -17,16 +17,13 @@ public class ItemUpdateDtoToItemConverter implements Converter<ItemUpdateDto, It
     @Override
     public Item convert(ItemUpdateDto itemUpdateDto) {
         Item ret = new Item();
-        itemService.findById(itemUpdateDto.id())
-            .switchIfEmpty(Mono.error(new ItemNotFoundException("Item with id " + itemUpdateDto.id() + " was not found")))
-                .subscribe(x -> {
-                    ret.setId(itemUpdateDto.id());
-                    ret.setName(itemUpdateDto.name());
-                    ret.setCalories(itemUpdateDto.calories());
-                    ret.setCarbs(itemUpdateDto.carbs());
-                    ret.setProtein(itemUpdateDto.protein());
-                    ret.setFats(itemUpdateDto.fats());
-                });
+
+        ret.setId(itemUpdateDto.id());
+        ret.setName(itemUpdateDto.name());
+        ret.setCalories(itemUpdateDto.calories());
+        ret.setCarbs(itemUpdateDto.carbs());
+        ret.setProtein(itemUpdateDto.protein());
+        ret.setFats(itemUpdateDto.fats());
 
         return ret;
     }

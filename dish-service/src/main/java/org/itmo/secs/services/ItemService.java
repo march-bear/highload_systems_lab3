@@ -36,15 +36,18 @@ public class ItemService {
     
     @Transactional(isolation=Isolation.SERIALIZABLE)
     public Mono<Void> update(Item item) {
-        return findByName(item.getName())
-                .flatMap(x -> {
-                    if (!Objects.equals(x.getId(), item.getId())) {
-                        return Mono.error(new DataIntegrityViolationException("Item with name " + item.getName() + " already exist"));
-                    } else {
-                        return findById(item.getId());
-                    }
-                })
+        return findById(item.getId())
                 .switchIfEmpty(Mono.error(new ItemNotFoundException("Item with id " + item.getId() + " was not found")))
+                .flatMap(orig -> findByName(item.getName())
+                        .flatMap(x -> {
+                            if (!Objects.equals(x.getId(), item.getId())) {
+                                return Mono.error(new DataIntegrityViolationException("Item with name " + item.getName() + " already exist"));
+                            } else {
+                                return Mono.just(orig);
+                            }
+                        })
+                        .switchIfEmpty(Mono.just(orig))
+                )
                 .map(x -> itemRepository.save(item)).then();
     }
 

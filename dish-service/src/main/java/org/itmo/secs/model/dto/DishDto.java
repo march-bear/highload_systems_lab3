@@ -8,12 +8,12 @@ public record DishDto(
     Long id,
     @Schema(description = "Имя продукта", type = "string", example = "Гречка по-купечески")
     String name,
+    @Schema(description = "Ккал", type = "number", example = "220")
+    Integer calories,
     @Schema(description = "Углеводы, г", type = "number", example = "53")
     Integer carbs,
     @Schema(description = "Белки, г", type = "number", example = "7")
     Integer protein,
     @Schema(description = "Жиры, г", type = "number", example = "1")
-    Integer fats,
-    @Schema(description = "Ккал", type = "number", example = "220")
-    Integer calories
+    Integer fats
 ) { }
