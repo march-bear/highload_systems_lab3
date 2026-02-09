@@ -40,7 +40,7 @@ public class DishService {
     public Mono<Void> addItem(Long itemId, Long dishId, int count) {
         Dish dish = dishRepository.findById(dishId).orElse(null);
         if (dish == null) {
-            throw new ItemNotFoundException("Dish with id " + dishId + " was not found");
+            return Mono.error(new ItemNotFoundException("Dish with id " + dishId + " was not found"));
         }
 
         return itemService.findById(itemId)

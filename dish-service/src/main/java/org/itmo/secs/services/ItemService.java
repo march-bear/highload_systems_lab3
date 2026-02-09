@@ -73,7 +73,7 @@ public class ItemService {
     @Transactional(isolation=Isolation.SERIALIZABLE)
     public Mono<Void> delete(Long id) {
         if (itemRepository.findById(id).isEmpty()) {
-            throw new ItemNotFoundException("Item with id " + id + " was not found");
+            return Mono.error(new ItemNotFoundException("Item with id " + id + " was not found"));
         }
         itemRepository.deleteById(id);
         return Mono.empty();
