@@ -25,6 +25,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import io.restassured.RestAssured;
 
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -43,6 +44,10 @@ class ItemControllerTest {
 
     @LocalServerPort
     private String port;
+
+    static {
+        RestAssured.registerParser("text/plain", io.restassured.parsing.Parser.JSON);
+    }
 
     @Container
     static PostgreSQLContainer<?> pgContainer = new PostgreSQLContainer<>("postgres:15-alpine")
@@ -133,5 +138,40 @@ class ItemControllerTest {
                 .statusCode(204);
 
         assertFalse(itemRepository.existsById(item.getId()));
+    }
+
+    @Test
+    void testFindById_success() {
+        Item item = items.get(0);
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + TEST_JWT)
+                .get("/item?id=" + item.getId())
+                .then()
+                .statusCode(200)
+                .body("name", equalTo(item.getName()));
+    }
+
+    @Test
+    void testFindByName_success() {
+        Item item = items.get(0);
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + TEST_JWT)
+                .get("/item?name=" + item.getName())
+                .then()
+                .statusCode(200)
+                .body("name", equalTo(item.getName()));
+    }
+
+    @Test
+    void testFindAll_defaultPagination() {
+        RestAssured.given()
+                .header("Authorization", "Bearer " + TEST_JWT)
+                .get("/item")
+                .then()
+                .statusCode(200)
+                .header("X-Total-Count", String.valueOf(items.size()))
+                .body("$.size()", equalTo(items.size()));
     }
 }

@@ -139,16 +139,6 @@ class MenuControllerTest {
                 .expectStatus().isUnauthorized();
     }
 
-//    @Test
-//    void createMenu_invalidToken_401() {
-//        webTestClient.post()
-//                .uri("/menu")
-//                .header(HttpHeaders.AUTHORIZATION, "Bearer bad.token.ccc")
-//                .bodyValue(createDto)
-//                .exchange()
-//                .expectStatus().isUnauthorized();
-//    }
-
     /* ===================== CRUD ===================== */
 
     @Test
@@ -291,5 +281,62 @@ class MenuControllerTest {
                 json,
                 mapper.getTypeFactory().constructCollectionType(List.class, DishDto.class)
         );
+    }
+
+    @Test
+    void findAll_asUser_returnsOnlyOwnMenus() throws Exception {
+        // given
+        create();
+
+        // when
+        String json = webTestClient.get()
+                .uri("/menu")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + userToken)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .returnResult()
+                .getResponseBody();
+
+        // then
+        List<MenuDto> menus = mapper.readValue(
+                json,
+                mapper.getTypeFactory().constructCollectionType(List.class, MenuDto.class)
+        );
+
+        assertThat(menus).hasSize(1);
+    }
+
+    @Test
+    void findAll_asAdmin_returnsAllMenus() throws Exception {
+        // given
+        create();
+
+        // when
+        String json = webTestClient.get()
+                .uri("/menu")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .returnResult()
+                .getResponseBody();
+
+        // then
+        List<MenuDto> menus = mapper.readValue(
+                json,
+                mapper.getTypeFactory().constructCollectionType(List.class, MenuDto.class)
+        );
+
+        assertThat(menus).isNotEmpty();
+    }
+
+    @Test
+    void findById_notFound_404() {
+        webTestClient.get()
+                .uri("/menu?id=999")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + userToken)
+                .exchange()
+                .expectStatus().isNotFound();
     }
 }

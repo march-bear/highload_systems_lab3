@@ -261,4 +261,33 @@ class DishControllerTest {
                 .then()
                 .statusCode(404);
     }
+
+    @Test
+    void testFindAll_withPagination() {
+        io.restassured.RestAssured.given()
+                .header("Authorization", "Bearer " + testJwtToken)
+                .queryParam("pnumber", 0)
+                .queryParam("psize", 1)
+                .when()
+                .get("/dish")
+                .then()
+                .statusCode(200)
+                .contentType("application/json")
+                .body("$", org.hamcrest.Matchers.hasSize(1));
+    }
+
+    @Test
+    void testDeleteDish_success() {
+        Dish dish = dishes.get(0);
+
+        io.restassured.RestAssured.given()
+                .header("Authorization", "Bearer " + testJwtToken)
+                .queryParam("id", dish.getId())
+                .when()
+                .delete("/dish")
+                .then()
+                .statusCode(204);
+
+        assertFalse(dishRepository.existsById(dish.getId()));
+    }
 }
