@@ -32,9 +32,11 @@ public class MenuService {
             menu.getDate(),
             menu.getUserId()
         )
-                .doOnNext(x -> {
-                    throw new DataIntegrityViolationException("Menu with given key already exists");
-                })
+                .flatMap(x ->
+                    Mono.<Menu>error(new DataIntegrityViolationException(
+                               "Menu with given key already exists"
+                    ))
+                )
                 .switchIfEmpty(menuRep.save(menu));
     }
 
@@ -146,11 +148,11 @@ public class MenuService {
         return menuRep.findAll()
                 .filter(menu -> Objects.equals(menu.getUserId(), userId))
                 .skip((long) page * size)
-                .limitRate(size);
+                .take(size);
     }
 
     public Flux<Menu> findAll(int page, int size) {
-        return menuRep.findAll().skip((long) page * size).limitRate(size);
+        return menuRep.findAll().skip((long) page * size).take(size);
     }
 
     public Flux<Menu> findAllByUsername(String authHeader, String username) {

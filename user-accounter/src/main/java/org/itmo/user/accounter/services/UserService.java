@@ -10,7 +10,6 @@ import lombok.AllArgsConstructor;
 
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -25,10 +24,12 @@ public class UserService implements ReactiveUserDetailsService {
     @Transactional
     public Mono<User> create(User user) {
         return userRep.findByUsername(user.getUsername())
-                .doOnNext(x -> {
-                    throw new DataIntegrityViolationException("User with name " + user.getUsername() + " already exists" );
-                })
-                .switchIfEmpty(userRep.save(user));
+                .flatMap(existing ->
+                        Mono.<User>error(new DataIntegrityViolationException(
+                                "User with name " + user.getUsername() + " already exists"
+                        ))
+                )
+                .switchIfEmpty(Mono.defer(() -> userRep.save(user)));
     }
 
     @Transactional
@@ -66,13 +67,14 @@ public class UserService implements ReactiveUserDetailsService {
 
     public Mono<User> getCurrentUser() {
         return ReactiveSecurityContextHolder.getContext()
-                .map(SecurityContext::getAuthentication)
-                .flatMap(auth -> {
+                .flatMap(ctx -> {
+                    var auth = ctx.getAuthentication();
+
                     if (auth == null) {
                         return Mono.error(new BadCredentialsException("Unauthenticated"));
-                    } else {
-                        return findUserByUsername(auth.getName());
                     }
+
+                    return findUserByUsername(auth.getName());
                 });
     }
 
