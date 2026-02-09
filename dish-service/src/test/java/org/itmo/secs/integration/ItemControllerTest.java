@@ -8,6 +8,7 @@ import com.google.gson.Gson;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import io.restassured.parsing.Parser;
 import org.itmo.secs.model.dto.ItemCreateDto;
 import org.itmo.secs.model.dto.ItemUpdateDto;
 import org.itmo.secs.model.entities.Item;
@@ -45,10 +46,6 @@ class ItemControllerTest {
     @LocalServerPort
     private String port;
 
-    static {
-        RestAssured.registerParser("text/plain", io.restassured.parsing.Parser.JSON);
-    }
-
     @Container
     static PostgreSQLContainer<?> pgContainer = new PostgreSQLContainer<>("postgres:15-alpine")
             .withDatabaseName("test-db")
@@ -82,6 +79,7 @@ class ItemControllerTest {
 
     @BeforeEach
     void setUp() {
+        RestAssured.registerParser("text/plain", Parser.JSON);
         RestAssured.baseURI = "http://localhost:" + port;
         RestAssured.port = Integer.parseInt(port);
 
