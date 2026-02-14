@@ -29,6 +29,7 @@ import reactor.core.publisher.Mono;
 @Tag(name = "Аутентификация (Auth API)")
 public class AuthController {
     private AuthenticationService authService;
+    private ConversionService conversionService;
 
     @Operation(summary = "Аутентификация", description = "Производится аутентификация пользователя")
     @ApiResponses(value = {
@@ -51,9 +52,9 @@ public class AuthController {
                 );
     }
 
-    @Operation(summary = "Регистрация", description = "Создается новый пользователь с ролью USER")
+    @Operation(summary = "Создать пользователя", description = "Создается новый пользователь с ролью USER")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Регистрация прошла успешно",
+            @ApiResponse(responseCode = "201", description = "Создание прошло успешно",
                     content = {
                             @Content(mediaType = "application/json", schema = @Schema(implementation = JwtTokenDto.class))
                     }
@@ -65,10 +66,9 @@ public class AuthController {
             )
     })
     @PostMapping("register")
-    public Mono<ResponseEntity<JwtTokenDto>> signUp(@Valid @RequestBody UserAuthDto userAuthDto) {
+    @ResponseStatus(HttpStatus.CREATED)
+    public Mono<UserDto> signUp(@Valid @RequestBody UserAuthDto userAuthDto) {
         return authService.signUp(userAuthDto)
-                .flatMap(
-                        dto -> Mono.just(ResponseEntity.status(HttpStatus.CREATED).body(dto))
-                );
+                .map(user -> conversionService.convert(user, UserDto.class));
     }
 }

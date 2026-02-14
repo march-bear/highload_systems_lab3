@@ -30,7 +30,8 @@ public class SecurityConfig {
                         new HttpStatusServerEntryPoint(HttpStatus.UNAUTHORIZED)
                 ))
                 .authorizeExchange(auth -> auth
-                                .pathMatchers("/login", "/register").permitAll()
+                                .pathMatchers("/login").permitAll()
+                                .pathMatchers("/register").hasAuthority("ADMIN")
                                 .pathMatchers("/user/whoami").authenticated()
                                 .pathMatchers("/user/**").hasAuthority("ADMIN")
                                 .pathMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()

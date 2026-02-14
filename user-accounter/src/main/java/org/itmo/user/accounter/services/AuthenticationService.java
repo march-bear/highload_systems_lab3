@@ -20,7 +20,7 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final ReactiveAuthenticationManager authenticationManager;
 
-    public Mono<JwtTokenDto> signUp(UserAuthDto request) {
+    public Mono<User> signUp(UserAuthDto request) {
 
         var user = User.builder()
                 .username(request.username())
@@ -28,9 +28,7 @@ public class AuthenticationService {
                 .role(UserRole.USER)
                 .build();
 
-        return userService.create(user)
-                .map(jwtService::generateToken)
-                .map(JwtTokenDto::new);
+        return userService.create(user);
     }
 
     public Mono<JwtTokenDto> signIn(UserAuthDto request) {
