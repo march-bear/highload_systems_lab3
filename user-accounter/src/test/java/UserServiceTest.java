@@ -7,7 +7,10 @@ import org.itmo.user.accounter.utils.exceptions.DataIntegrityViolationException;
 import org.itmo.user.accounter.utils.exceptions.ItemNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
@@ -19,10 +22,14 @@ import reactor.util.context.Context;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
-    private final UserRepository userRepository = Mockito.mock(UserRepository.class);
-    private final UserService userService = new UserService(userRepository);
+    @Mock
+    private UserRepository userRepository;
+
+    @InjectMocks
+    private UserService userService;
 
     private User testUser;
     private User adminUser;
@@ -58,10 +65,7 @@ class UserServiceTest {
         when(userRepository.save(testUser)).thenReturn(Mono.just(testUser));
 
         StepVerifier.create(userService.create(testUser))
-                .expectNextMatches(user ->
-                        user.getId().equals(1L) &&
-                                user.getUsername().equals("TestUser")
-                )
+                .expectNext(testUser)
                 .verifyComplete();
 
         verify(userRepository).findByUsername(testUser.getUsername());
@@ -83,14 +87,24 @@ class UserServiceTest {
 
     @Test
     void updateRole_ShouldUpdate_WhenUserExistsAndNotAdmin() {
+        User updatedUser = User.builder()
+                .id(existingUser.getId())
+                .username(existingUser.getUsername())
+                .password(existingUser.getPassword())
+                .role(UserRole.MODERATOR)
+                .build();
+
         when(userRepository.findById(existingUser.getId()))
                 .thenReturn(Mono.just(existingUser));
         when(userRepository.save(any(User.class)))
-                .thenReturn(Mono.just(existingUser));
+                .thenReturn(Mono.just(updatedUser));
 
-        StepVerifier.create(userService.updateRole(existingUser.getId(), UserRole.USER))
-                .expectNextCount(1)
+        StepVerifier.create(userService.updateRole(existingUser.getId(), UserRole.MODERATOR))
+                .expectNext(updatedUser)
                 .verifyComplete();
+
+        verify(userRepository).findById(existingUser.getId());
+        verify(userRepository).save(any(User.class));
     }
 
     @Test
@@ -99,15 +113,12 @@ class UserServiceTest {
                 .thenReturn(Mono.empty());
 
         StepVerifier.create(userService.updateRole(999L, UserRole.USER))
-                .expectError(DataIntegrityViolationException.class)
+                .expectError(ItemNotFoundException.class)
                 .verify();
     }
 
     @Test
     void updateRole_ShouldFail_WhenTryingToAssignAdmin() {
-        when(userRepository.findById(existingUser.getId()))
-                .thenReturn(Mono.just(existingUser));
-
         StepVerifier.create(userService.updateRole(existingUser.getId(), UserRole.ADMIN))
                 .expectError(AssigningAdminViaAPIException.class)
                 .verify();
@@ -132,6 +143,9 @@ class UserServiceTest {
 
         StepVerifier.create(userService.deleteById(existingUser.getId()))
                 .verifyComplete();
+
+        verify(userRepository).findById(existingUser.getId());
+        verify(userRepository).deleteById(existingUser.getId());
     }
 
     @Test
@@ -155,7 +169,7 @@ class UserServiceTest {
     }
 
     @Test
-    void findById_ShouldReturnUser() {
+    void findById_ShouldReturnUser_WhenExists() {
         when(userRepository.findById(1L)).thenReturn(Mono.just(testUser));
 
         StepVerifier.create(userService.findById(1L))
@@ -164,15 +178,16 @@ class UserServiceTest {
     }
 
     @Test
-    void findById_ShouldReturnEmpty() {
-        when(userRepository.findById(1L)).thenReturn(Mono.empty());
+    void findById_ShouldThrowException_WhenNotFound() {
+        when(userRepository.findById(999L)).thenReturn(Mono.empty());
 
-        StepVerifier.create(userService.findById(1L))
-                .verifyComplete();
+        StepVerifier.create(userService.findById(999L))
+                .expectError(ItemNotFoundException.class)
+                .verify();
     }
 
     @Test
-    void findByUsername_ShouldReturnUser() {
+    void findUserByUsername_ShouldReturnUser_WhenExists() {
         when(userRepository.findByUsername("TestUser"))
                 .thenReturn(Mono.just(testUser));
 
@@ -182,11 +197,35 @@ class UserServiceTest {
     }
 
     @Test
-    void findByUsername_ShouldReturnEmpty() {
+    void findUserByUsername_ShouldThrowException_WhenNotFound() {
+        when(userRepository.findByUsername("Unknown"))
+                .thenReturn(Mono.error(new ItemNotFoundException("Not found")));
+
+        StepVerifier.create(userService.findUserByUsername("Unknown"))
+                .expectError(ItemNotFoundException.class)
+                .verify();
+    }
+
+    @Test
+    void findByUsername_ShouldReturnUserDetails_WhenExists() {
+        when(userRepository.findByUsername("TestUser"))
+                .thenReturn(Mono.just(testUser));
+
+        StepVerifier.create(userService.findByUsername("TestUser"))
+                .expectNextMatches(userDetails ->
+                        userDetails.getUsername().equals("TestUser") &&
+                                userDetails.getAuthorities().size() == 1 &&
+                                userDetails.getAuthorities().iterator().next().getAuthority().equals("USER")
+                )
+                .verifyComplete();
+    }
+
+    @Test
+    void findByUsername_ShouldReturnEmpty_WhenNotFound() {
         when(userRepository.findByUsername("Unknown"))
                 .thenReturn(Mono.empty());
 
-        StepVerifier.create(userService.findUserByUsername("Unknown"))
+        StepVerifier.create(userService.findByUsername("Unknown"))
                 .verifyComplete();
     }
 
@@ -231,15 +270,9 @@ class UserServiceTest {
     }
 
     @Test
-    void findByUsernameForUserDetails_ShouldReturnUserDetails() {
-        when(userRepository.findByUsername("TestUser"))
-                .thenReturn(Mono.just(testUser));
-
-        StepVerifier.create(userService.findByUsername("TestUser"))
-                .expectNextMatches(userDetails ->
-                        userDetails.getUsername().equals("TestUser") &&
-                                userDetails.getAuthorities().size() == 1
-                )
-                .verifyComplete();
+    void getCurrentUser_ShouldFail_WhenAuthenticationIsNull() {
+        StepVerifier.create(userService.getCurrentUser())
+                .expectError(BadCredentialsException.class)
+                .verify();
     }
 }

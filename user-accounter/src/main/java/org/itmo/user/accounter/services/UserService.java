@@ -39,7 +39,7 @@ public class UserService implements ReactiveUserDetailsService {
         }
 
         return userRep.findById(id)
-                .switchIfEmpty(Mono.error(new DataIntegrityViolationException("User with id " + id + " was not found")))
+                .switchIfEmpty(Mono.error(new ItemNotFoundException("User with id " + id + " was not found")))
                 .filter(user -> user.getRole() != UserRole.ADMIN)
                 .switchIfEmpty(Mono.error(new AssigningAdminViaAPIException("ADMIN cannot be unassigned via web API")))
                 .flatMap(user -> userRep.save(
@@ -67,6 +67,7 @@ public class UserService implements ReactiveUserDetailsService {
 
     public Mono<User> getCurrentUser() {
         return ReactiveSecurityContextHolder.getContext()
+                .switchIfEmpty(Mono.error(new BadCredentialsException("Unauthenticated")))
                 .flatMap(ctx -> {
                     var auth = ctx.getAuthentication();
 

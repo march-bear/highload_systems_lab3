@@ -1,4 +1,3 @@
-import org.itmo.user.accounter.model.dto.JwtTokenDto;
 import org.itmo.user.accounter.model.dto.UserAuthDto;
 import org.itmo.user.accounter.model.entities.User;
 import org.itmo.user.accounter.model.entities.enums.UserRole;
@@ -17,8 +16,8 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(MockitoExtension.class)
 class AuthenticationServiceTest {
@@ -39,7 +38,7 @@ class AuthenticationServiceTest {
     private AuthenticationService authenticationService;
 
     @Test
-    void signUp_ShouldReturnToken_WhenSuccessful() {
+    void signUp_ShouldReturnUserDto_WhenSuccessful() {
         // Arrange
         UserAuthDto request = new UserAuthDto("testUser", "password123");
         User user = User.builder()
@@ -48,18 +47,34 @@ class AuthenticationServiceTest {
                 .password("encodedPassword")
                 .role(UserRole.USER)
                 .build();
-        String token = "jwt.token.here";
 
         when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
         when(userService.create(any(User.class))).thenReturn(Mono.just(user));
-        when(jwtService.generateToken(any(User.class))).thenReturn(token);
 
         // Act & Assert
         StepVerifier.create(authenticationService.signUp(request))
-                .expectNextMatches(jwtTokenDto ->
-                        jwtTokenDto.token().equals(token)
-                )
+                .assertNext(userDto -> {
+                    assertThat(userDto.getId()).isEqualTo(1L);
+                    assertThat(userDto.getUsername()).isEqualTo("testUser");
+                    assertThat(userDto.getRole()).isEqualTo(UserRole.USER);
+                    // Password should not be in DTO
+                })
                 .verifyComplete();
+    }
+
+    @Test
+    void signUp_ShouldPropagateError_WhenUserServiceFails() {
+        // Arrange
+        UserAuthDto request = new UserAuthDto("testUser", "password123");
+
+        when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
+        when(userService.create(any(User.class)))
+                .thenReturn(Mono.error(new RuntimeException("User already exists")));
+
+        // Act & Assert
+        StepVerifier.create(authenticationService.signUp(request))
+                .expectError(RuntimeException.class)
+                .verify();
     }
 
     @Test
@@ -76,7 +91,7 @@ class AuthenticationServiceTest {
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(Mono.just(new UsernamePasswordAuthenticationToken(
-                        user,
+                        user.getUsername(),
                         null,
                         user.getAuthorities()
                 )));
@@ -98,6 +113,26 @@ class AuthenticationServiceTest {
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(Mono.error(new RuntimeException("Authentication failed")));
+
+        // Act & Assert
+        StepVerifier.create(authenticationService.signIn(request))
+                .expectError(RuntimeException.class)
+                .verify();
+    }
+
+    @Test
+    void signIn_ShouldPropagateError_WhenUserNotFound() {
+        // Arrange
+        UserAuthDto request = new UserAuthDto("testUser", "password123");
+
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(Mono.just(new UsernamePasswordAuthenticationToken(
+                        "testUser",
+                        null,
+                        null
+                )));
+        when(userService.findByUsername("testUser"))
+                .thenReturn(Mono.error(new RuntimeException("User not found")));
 
         // Act & Assert
         StepVerifier.create(authenticationService.signIn(request))
