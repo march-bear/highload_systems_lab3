@@ -84,17 +84,42 @@ public class UserController {
         }
     }
 
+    @Operation(summary = "Найти данные текущего пользователя", description = "Ищет данные о пользователе в базе")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Содержит данные пользователя",
+                    content = {
+                            @Content(mediaType = "application/json", schema = @Schema(implementation = UserDto.class))
+                    }
+            )
+    })
     @GetMapping("/whoami")
-    public Mono<ResponseEntity<UserDto>> currentUser() {
+    @ResponseStatus(HttpStatus.OK)
+    public Mono<UserDto> currentUser() {
         return userService.getCurrentUser()
-                .map(user -> conversionService.convert(user, UserDto.class))
-                .map(ResponseEntity::ok);
+                .map(user -> conversionService.convert(user, UserDto.class));
     }
 
+    @Operation(summary = "Изменить роль пользователя", description = "При указании id изменяет роль пользователя")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "Содержит найденного пользователя",
+                    content = {
+                            @Content(mediaType = "application/json", schema = @Schema(implementation = UserDto.class))
+                    }
+            ),
+            @ApiResponse(responseCode = "404", description = "Пользователь с указанным ID не был найдено",
+                    content = {
+                            @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorDto.class))
+                    }
+            )
+    })
     @PutMapping("/role")
-    public Mono<ResponseEntity<UserDto>> setRoleToUser(UserSetRoleDto dto) {
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<UserDto> setRoleToUser(UserSetRoleDto dto) {
         return userService.updateRole(dto.id(), dto.role())
-                .map(user -> conversionService.convert(user, UserDto.class))
-                .map(ResponseEntity::ok);
+                .map(user -> conversionService.convert(user, UserDto.class));
     }
 }
