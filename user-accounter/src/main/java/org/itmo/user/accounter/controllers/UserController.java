@@ -118,7 +118,7 @@ public class UserController {
     })
     @PutMapping("/role")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public Mono<UserDto> setRoleToUser(UserSetRoleDto dto) {
+    public Mono<UserDto> setRoleToUser(@RequestBody UserSetRoleDto dto) {
         return userService.updateRole(dto.id(), dto.role())
                 .map(user -> conversionService.convert(user, UserDto.class));
     }

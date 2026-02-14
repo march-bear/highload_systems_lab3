@@ -1,6 +1,9 @@
 import org.itmo.user.accounter.UserAccounterApp;
 import org.itmo.user.accounter.model.dto.UserAuthDto;
 import org.itmo.user.accounter.model.dto.JwtTokenDto;
+import org.itmo.user.accounter.model.dto.UserDto;
+import org.itmo.user.accounter.model.dto.UserSetRoleDto;
+import org.itmo.user.accounter.repositories.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
@@ -16,7 +19,9 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import reactor.core.publisher.Mono;
+
+import static org.itmo.user.accounter.model.entities.enums.UserRole.ADMIN;
+import static org.itmo.user.accounter.model.entities.enums.UserRole.USER;
 
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -30,6 +35,9 @@ class UserControllerTest {
 
     @Autowired
     private WebTestClient webTestClient;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES =
@@ -65,25 +73,50 @@ class UserControllerTest {
 
     // Helper method to get admin token
     private String getAdminToken() {
-        // First, create an admin user (you might need to seed your test database with an admin user)
-        // Or create a regular user and use it for tests that don't require admin role
         return getToken("ffff", "password");
     }
 
     private String registerAndGetToken(String username, String password) {
         UserAuthDto authRequest = new UserAuthDto(username, password);
+        String token = getAdminToken();
 
-        JwtTokenDto tokenDto = webTestClient.post()
+        webTestClient.post()
                 .uri("/register")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .bodyValue(authRequest)
                 .exchange()
                 .expectStatus().isCreated()
+                .expectBody(UserDto.class);
+
+        JwtTokenDto tokenDto = webTestClient.post()
+                .uri("/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(authRequest)
+                .exchange()
+                .expectStatus().isOk()
                 .expectBody(JwtTokenDto.class)
                 .returnResult()
                 .getResponseBody();
 
         return tokenDto != null ? tokenDto.token() : null;
+    }
+
+    private Long registerAndGetId(String username, String password) {
+        UserAuthDto authRequest = new UserAuthDto(username, password);
+        String token = getAdminToken();
+
+        UserDto dto = webTestClient.post()
+                .uri("/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .bodyValue(authRequest)
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(UserDto.class)
+                .returnResult().getResponseBody();
+
+        return dto.id();
     }
 
     private String getToken(String username, String password) {
@@ -130,11 +163,7 @@ class UserControllerTest {
         String username = "whoamiUser";
         String password = "password123";
 
-        // Register
-        registerAndGetToken(username, password);
-
-        // Login
-        String token = getToken(username, password);
+        String token = registerAndGetToken(username, password);
 
         webTestClient.get()
                 .uri("/user/whoami")
@@ -157,29 +186,29 @@ class UserControllerTest {
 
     @Test
     void register_success() {
+        String token = getAdminToken();
         UserAuthDto request = new UserAuthDto("newUser", "password123");
 
         webTestClient.post()
                 .uri("/register")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .bodyValue(request)
                 .exchange()
                 .expectStatus().isCreated()
-                .expectBody(JwtTokenDto.class)
+                .expectBody(UserDto.class)
                 .value(dto -> {
-                    assert dto.token() != null;
-                    assert !dto.token().isEmpty();
+                    assert dto.id() != null;
+                    assert dto.username().equals(request.username());
                 });
     }
 
     @Test
     void login_success() {
-        // First register
         String username = "loginUser";
         String password = "password123";
         registerAndGetToken(username, password);
 
-        // Then login
         UserAuthDto request = new UserAuthDto(username, password);
 
         webTestClient.post()
@@ -211,16 +240,42 @@ class UserControllerTest {
 
     @Test
     void updateUserRole_success() {
-        String token = registerAndGetToken("roleUser", "password123");
+        String token = getAdminToken();
+        Long regId = registerAndGetId("roleUser1", "password123");
+        UserSetRoleDto request = new UserSetRoleDto(regId, USER);
+        webTestClient.put()
+                .uri("/user/role")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .bodyValue(request)
+                .exchange()
+                .expectStatus().isNoContent();
     }
 
-    /* ---------------- DELETE ---------------- */
+    @Test
+    void updateUserRole_notAdmin_failed() {
+        String token = registerAndGetToken("roleUser2", "password123");
+        UserSetRoleDto request = new UserSetRoleDto(1L, USER);
+        webTestClient.put()
+                .uri("/user/role")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .bodyValue(request)
+                .exchange()
+                .expectStatus().isForbidden();
+    }
 
     @Test
-    void deleteUser_success() {
-        String username = "deleteUser";
-        String password = "password123";
-
-        String token = registerAndGetToken(username, password);
+    void updateUserRole_setAdminRole_failed() {
+        String token = getAdminToken();
+        Long regId = registerAndGetId("roleUser3", "password123");
+        UserSetRoleDto request = new UserSetRoleDto(regId, ADMIN);
+        webTestClient.put()
+                .uri("/user/role")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .bodyValue(request)
+                .exchange()
+                .expectStatus().isBadRequest();
     }
 }
