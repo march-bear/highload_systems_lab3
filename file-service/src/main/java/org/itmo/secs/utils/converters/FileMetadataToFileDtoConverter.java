@@ -15,7 +15,7 @@ public class FileMetadataToFileDtoConverter implements Converter<FileMetadata, F
             f.getId(),
             f.getFileName(),
             f.getFileSize(),
-            ("/api/files/" + f.getId() + "/download")
+            ("/file/download?id=" + f.getId())
         );
     }
 }

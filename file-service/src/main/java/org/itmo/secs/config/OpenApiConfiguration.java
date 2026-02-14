@@ -14,10 +14,10 @@ public class OpenApiConfiguration {
     @Bean
     public OpenAPI customOpenApi() {
         return new OpenAPI().info(new Info()
-                .title("Menu API")
-                .description("Menu Service API")
-                .version("1.0.3")
-        )
+                    .title("File API")
+                    .description("File Service API")
+                    .version("1.0.3")
+                )
                 .addServersItem(
                         new Server().url("http://localhost:8080")
                 )
