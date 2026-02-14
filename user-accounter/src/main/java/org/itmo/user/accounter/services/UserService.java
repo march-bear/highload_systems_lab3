@@ -10,7 +10,6 @@ import lombok.AllArgsConstructor;
 
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -25,10 +24,12 @@ public class UserService implements ReactiveUserDetailsService {
     @Transactional
     public Mono<User> create(User user) {
         return userRep.findByUsername(user.getUsername())
-                .doOnNext(x -> {
-                    throw new DataIntegrityViolationException("User with name " + user.getUsername() + " already exists" );
-                })
-                .switchIfEmpty(userRep.save(user));
+                .flatMap(existing ->
+                        Mono.<User>error(new DataIntegrityViolationException(
+                                "User with name " + user.getUsername() + " already exists"
+                        ))
+                )
+                .switchIfEmpty(Mono.defer(() -> userRep.save(user)));
     }
 
     @Transactional
@@ -38,7 +39,7 @@ public class UserService implements ReactiveUserDetailsService {
         }
 
         return userRep.findById(id)
-                .switchIfEmpty(Mono.error(new DataIntegrityViolationException("User with id " + id + " was not found")))
+                .switchIfEmpty(Mono.error(new ItemNotFoundException("User with id " + id + " was not found")))
                 .filter(user -> user.getRole() != UserRole.ADMIN)
                 .switchIfEmpty(Mono.error(new AssigningAdminViaAPIException("ADMIN cannot be unassigned via web API")))
                 .flatMap(user -> userRep.save(
@@ -66,13 +67,15 @@ public class UserService implements ReactiveUserDetailsService {
 
     public Mono<User> getCurrentUser() {
         return ReactiveSecurityContextHolder.getContext()
-                .map(SecurityContext::getAuthentication)
-                .flatMap(auth -> {
+                .switchIfEmpty(Mono.error(new BadCredentialsException("Unauthenticated")))
+                .flatMap(ctx -> {
+                    var auth = ctx.getAuthentication();
+
                     if (auth == null) {
                         return Mono.error(new BadCredentialsException("Unauthenticated"));
-                    } else {
-                        return findUserByUsername(auth.getName());
                     }
+
+                    return findUserByUsername(auth.getName());
                 });
     }
 
