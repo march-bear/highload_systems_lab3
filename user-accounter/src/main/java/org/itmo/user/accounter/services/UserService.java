@@ -61,7 +61,7 @@ public class UserService implements ReactiveUserDetailsService {
     }
 
     public Mono<User> findById(Long id) {
-        return userRep.findById(id);
+        return userRep.findById(id).switchIfEmpty(Mono.error(new ItemNotFoundException("User with id " + id + " was not found")));
     }
 
     public Mono<User> getCurrentUser() {
