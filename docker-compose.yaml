@@ -87,7 +87,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     ports:
-      - "5433:5432"
+      - "5436:5432"
     volumes:
       - menu_service_db_data:/var/lib/postgresql/data
     networks:
@@ -152,8 +152,45 @@ services:
       eureka-server:
         condition: service_healthy
 
+  file-service-db:
+    image: postgres:15-alpine
+    container_name: file-service-db
+    environment:
+      POSTGRES_DB: highload
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5435:5432"
+    volumes:
+      - file_service_db_data:/var/lib/postgresql/data
+    networks:
+      - highload-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d highload" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  file-service:
+    build: ./file-service
+    container_name: highload-file-service
+    ports:
+      - "8090:8090"
+    environment:
+      JWT_SECRET_KEY: SSByZWFsbHkgbGlrZSB0aGlzIHVuaXZlcnNpdHksIHNhdmUgbWU
+    depends_on:
+      file-service-db:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - highload-network
+
 volumes:
   dish_service_db_data:
+  file_service_db_data:
   menu_service_db_data:
   user_accounter_db_data:
 
