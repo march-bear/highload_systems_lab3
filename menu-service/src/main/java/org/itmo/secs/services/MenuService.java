@@ -6,6 +6,8 @@ import org.itmo.secs.client.UserServiceClient;
 import org.itmo.secs.model.dto.DishDto;
 import org.itmo.secs.model.entities.Menu;
 import org.itmo.secs.model.entities.enums.Meal;
+import org.itmo.secs.model.events.MenuCreateEvent;
+import org.itmo.secs.notification.MenuEventProducer;
 import org.itmo.secs.repositories.MenuRepository;
 import org.itmo.secs.utils.exceptions.DataIntegrityViolationException;
 import org.itmo.secs.utils.exceptions.ItemNotFoundException;
@@ -25,6 +27,7 @@ public class MenuService {
     private MenuDishesService menuDishesService;
     private DishServiceClient dishServiceClient;
     private UserServiceClient userServiceClient;
+    private MenuEventProducer menuEventProducer;
 
     public Mono<Menu> save(Menu menu) {
         return menuRep.findByMealAndDateAndUserId(
@@ -37,7 +40,19 @@ public class MenuService {
                                "Menu with given key already exists"
                     ))
                 )
-                .switchIfEmpty(menuRep.save(menu));
+                .switchIfEmpty(menuRep.save(menu))
+                .doOnSuccess(
+                        savedMenu -> {
+                            menuEventProducer.sendMenuCreated(
+                                    new MenuCreateEvent(
+                                            savedMenu.getId(),
+                                            savedMenu.getDate(),
+                                            savedMenu.getUserId(),
+                                            savedMenu.getMeal()
+                                    )
+                            );
+                        }
+                );
     }
 
     @Transactional
