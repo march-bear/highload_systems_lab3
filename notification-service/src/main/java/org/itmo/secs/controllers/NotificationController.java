@@ -27,12 +27,15 @@ public class NotificationController {
     private final NotificationService notifService;
     private final PagingConf pagingConf;
 
+    /* рассылка всем подписчикам информационного сообщения */
+    @PostMapping
     public Mono<Void> info(
             @Valid @RequestBody InfoDto dto
     ) {
         return notifService.saveForSubscribers(conversionService.convert(dto, Notification.class));
     }
 
+    /* сделать уведомление прочитанным */
     @PutMapping
     public Mono<Void> setIsRead(
             @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
@@ -41,6 +44,7 @@ public class NotificationController {
         return notifService.setIsReadForUser(userId, notifId);
     }
 
+    /* сделать Все уведомления прочитанными */
     @PutMapping("/all")
     public Mono<Void> setIsReadAll(
             @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId
@@ -48,6 +52,7 @@ public class NotificationController {
         return notifService.setAllIsReadForUser(userId);
     }
 
+    /* найти уведомление по ID */
     @GetMapping
     public Mono<NotificationDto> findById(
             @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
@@ -57,6 +62,7 @@ public class NotificationController {
                 .map(n -> Objects.requireNonNull(conversionService.convert(n, NotificationDto.class)));
     }
 
+    /* найти все уведомления (есть пагинация) */
     @GetMapping("/all")
     public Flux<NotificationDto> findAll(
             @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,

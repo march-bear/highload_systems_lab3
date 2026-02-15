@@ -41,7 +41,6 @@ public class JwtAuthenticationFilter implements WebFilter {
     @Override
     public @NonNull Mono<Void> filter(@NonNull ServerWebExchange exchange, @NonNull WebFilterChain chain) {
         exchange.getRequest().getHeaders().remove("X-User-Id");
-        exchange.getRequest().getHeaders().remove("X-User-Role");
 
         var authHeader = exchange.getRequest().getHeaders().getFirst(HEADER_NAME);
         if (!StringUtils.hasLength(authHeader) || !authHeader.startsWith(BEARER_PREFIX)) {
@@ -58,7 +57,6 @@ public class JwtAuthenticationFilter implements WebFilter {
                         String role = extractClaim(jwt, claims -> claims.get("role")).toString();
 
                         exchange.getRequest().getHeaders().add("X-User-Id", id);
-                        exchange.getRequest().getHeaders().add("X-User-Role", role);
 
                         return chain.filter(exchange).contextWrite(ReactiveSecurityContextHolder.withAuthentication(
                                 new UsernamePasswordAuthenticationToken(

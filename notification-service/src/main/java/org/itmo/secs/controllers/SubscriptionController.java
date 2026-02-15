@@ -17,6 +17,7 @@ import reactor.core.publisher.Mono;
 public class SubscriptionController {
     private final SubscriptionService subscrService;
 
+    /* подписаться на рассылку сообщений INFO */
     @PostMapping("subscribe")
     public Mono<Void> subscribe(
             @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId
@@ -24,6 +25,7 @@ public class SubscriptionController {
         return subscrService.subscribe(userId);
     }
 
+    /* отподписаться от рассылки сообщений INFO */
     @PostMapping("unsubscribe")
     public Mono<Void> unsubscribe(
             @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId
