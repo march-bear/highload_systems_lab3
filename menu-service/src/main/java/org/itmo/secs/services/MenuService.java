@@ -78,7 +78,7 @@ public class MenuService {
     }
 
     public Mono<Menu> findById(Long id) {
-       return menuRep.findById(id);
+       return menuRep.findById(id).switchIfEmpty(Mono.error(new ItemNotFoundException("Menu with id " + id + " was not found")));
     }
 
     public Mono<Menu> findByKey(Meal meal, LocalDate date, Long userId) {

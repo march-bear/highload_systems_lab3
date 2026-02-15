@@ -27,4 +27,18 @@
         </createTable>
     </changeSet>
 
+    <changeSet id="002-create-admin-user" author="your-name">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM users WHERE username = 'admin'
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="users">
+            <column name="username" value="admin"/>
+            <column name="password" value="$2a$10$e1qZB6SnrFCVV6kFzA5Kg.DB88zJgoYAqysNPTh3vMmAqoEk/tGQi"/> <!-- Хэш пароля -->
+            <column name="role" value="ADMIN"/>
+        </insert>
+    </changeSet>
+
 </databaseChangeLog>
