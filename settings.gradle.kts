@@ -6,3 +6,5 @@ include("config-server")
 include("gateway")
 include("menu-service")
 include("file-service")
+
+include("notification-service")
