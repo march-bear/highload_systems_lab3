@@ -30,10 +30,10 @@ public class SecurityConfig {
                 ))
                 .authorizeExchange(auth -> auth
                         .pathMatchers(HttpMethod.POST, "/notification").hasAuthority("ADMIN")
-                        .pathMatchers(HttpMethod.GET, "/notification").hasAuthority("USER")
-                        .pathMatchers(HttpMethod.GET, "/notification/all").hasAuthority("USER")
-                        .pathMatchers(HttpMethod.PUT, "/notification").hasAuthority("USER")
-                        .pathMatchers(HttpMethod.PUT, "/notification/all").hasAuthority("USER")
+                        .pathMatchers(HttpMethod.GET, "/notification").hasAnyAuthority("USER", "ADMIN")
+                        .pathMatchers(HttpMethod.GET, "/notification/all").hasAnyAuthority("USER", "ADMIN")
+                        .pathMatchers(HttpMethod.PUT, "/notification").hasAnyAuthority("USER", "ADMIN")
+                        .pathMatchers(HttpMethod.PUT, "/notification/all").hasAnyAuthority("USER", "ADMIN")
 
                         .pathMatchers(HttpMethod.POST, "/info/subscribe").hasAuthority("USER")
                         .pathMatchers(HttpMethod.POST, "/info/unsubscribe").hasAuthority("USER")
