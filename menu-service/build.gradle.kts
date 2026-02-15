@@ -20,6 +20,7 @@ repositories {
 dependencies {
     implementation("io.jsonwebtoken:jjwt-api:0.13.0")
     implementation("org.springframework.boot:spring-boot-starter-security:3.5.8")
+    implementation("org.springframework.kafka:spring-kafka")
 
     implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j:5.0.1")
     implementation("org.liquibase:liquibase-core:5.0.1")
