@@ -13,9 +13,11 @@ import org.itmo.secs.model.dto.FileDto;
 import org.itmo.secs.service.FileService;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -87,8 +89,17 @@ public class FileController {
     })
     @GetMapping("/download")
     @ResponseStatus(HttpStatus.OK)
-    public Mono<Flux<DataBuffer>> downloadFile(@Parameter(description = "Id файла", example = "1") @RequestParam(required=true) Long id) {
+    public Flux<DataBuffer> downloadFile(@Parameter(description = "Id файла", example = "1") @RequestParam(required=true) Long id,
+                                               ServerHttpResponse response) {
+
         return fileService.getFileMetadata(id)
-                .flatMap(metadata -> fileService.downloadFile(id));
+                .flatMapMany(metadata -> {
+                    // Устанавливаем заголовки для скачивания файла
+                    response.getHeaders().set(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"" + metadata.getFileName() + "\"");
+                    response.getHeaders().setContentType(MediaType.APPLICATION_OCTET_STREAM);
+
+                    return fileService.downloadFile(metadata.getId());
+                });
     }
 }
