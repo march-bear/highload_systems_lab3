@@ -2,7 +2,7 @@ package org.itmo.secs.utils.converters;
 
 import lombok.AllArgsConstructor;
 import org.itmo.secs.model.dto.FileDto;
-import org.itmo.secs.model.entity.FileMetadata;
+import org.itmo.secs.model.entities.FileMetadata;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.stereotype.Component;
 

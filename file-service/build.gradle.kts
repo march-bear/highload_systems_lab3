@@ -36,8 +36,6 @@ dependencies {
 
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.13.0")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.13.0")
-//    implementation("org.flywaydb:flyway-database-postgresql")
-//    implementation("org.flywaydb:flyway-core")
 
     runtimeOnly("org.postgresql:postgresql")
 
@@ -45,9 +43,9 @@ dependencies {
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
 
-//    testImplementation("org.flywaydb:flyway-core")
+    testImplementation("org.mockito:mockito-core")
+    testImplementation("org.mockito:mockito-junit-jupiter")
     testImplementation("io.projectreactor:reactor-test")
-    testImplementation("org.mockito:mockito-core:2.1.0")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
@@ -64,3 +62,5 @@ dependencyManagement {
 tasks.test {
     useJUnitPlatform()
 }
+
+//tasks.register("prepareKotlinBuildScriptModel"){}

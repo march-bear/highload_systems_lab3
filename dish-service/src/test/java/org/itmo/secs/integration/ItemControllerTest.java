@@ -8,7 +8,6 @@ import com.google.gson.Gson;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import io.restassured.parsing.Parser;
 import org.itmo.secs.model.dto.ItemCreateDto;
 import org.itmo.secs.model.dto.ItemUpdateDto;
 import org.itmo.secs.model.entities.Item;
@@ -79,7 +78,6 @@ class ItemControllerTest {
 
     @BeforeEach
     void setUp() {
-        RestAssured.registerParser("text/plain", Parser.JSON);
         RestAssured.baseURI = "http://localhost:" + port;
         RestAssured.port = Integer.parseInt(port);
 
@@ -105,6 +103,24 @@ class ItemControllerTest {
                 .statusCode(201);
 
         assertTrue(itemRepository.findByName("NEW_ITEM").isPresent());
+    }
+
+    @Test
+    void createItem_WithNameTooShort_ShouldReturn400() {
+        ItemCreateDto dto = new ItemCreateDto(
+                "AB",
+                300, 50, 20, 10
+        );
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + TEST_JWT)
+                .contentType("application/json")
+                .body(new Gson().toJson(dto))
+                .post("/item")
+                .then()
+                .statusCode(400);
+
+        assertFalse(itemRepository.findByName("AB").isPresent());
     }
 
     @Test
@@ -144,10 +160,12 @@ class ItemControllerTest {
 
         RestAssured.given()
                 .header("Authorization", "Bearer " + TEST_JWT)
-                .get("/item?id=" + item.getId())
+                .param("id", item.getId())
+                .when()
+                .get("/item")
                 .then()
                 .statusCode(200)
-                .body("name", equalTo(item.getName()));
+                .body("[0].name", equalTo(item.getName()));
     }
 
     @Test
@@ -156,20 +174,23 @@ class ItemControllerTest {
 
         RestAssured.given()
                 .header("Authorization", "Bearer " + TEST_JWT)
-                .get("/item?name=" + item.getName())
+                .param("name", item.getName())
+                .when()
+                .get("/item")
                 .then()
                 .statusCode(200)
-                .body("name", equalTo(item.getName()));
+                .body("[0].name", equalTo(item.getName()));
     }
 
     @Test
     void testFindAll_defaultPagination() {
         RestAssured.given()
                 .header("Authorization", "Bearer " + TEST_JWT)
+                .when()
                 .get("/item")
                 .then()
                 .statusCode(200)
                 .header("X-Total-Count", String.valueOf(items.size()))
-                .body("$.size()", equalTo(items.size()));
+                .body("size()", equalTo(items.size()));
     }
 }

@@ -22,6 +22,7 @@ import org.itmo.secs.utils.conf.PagingConf;
 
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.Objects;
 
 @AllArgsConstructor
@@ -111,7 +112,7 @@ public class ItemController {
             )
         })
     @GetMapping
-    public Mono<ResponseEntity<String>> find(
+    public Mono<ResponseEntity<List<ItemDto>>> find(
         @Parameter(description = "ID продукта", example = "1")
         @RequestParam(required=false) Long id,
         @Parameter(description = "Номер страницы (нумерация с 0)", example = "0")
@@ -137,31 +138,33 @@ public class ItemController {
         }
     }
 
-    public Mono<ResponseEntity<String>> findAll(Integer pageNumber, Integer pageSize) {
+    public Mono<ResponseEntity<List<ItemDto>>> findAll(Integer pageNumber, Integer pageSize) {
         return Mono.zip(
             itemService.findAll(pageNumber, pageSize)
             .map((it) -> Objects.requireNonNull(conversionService.convert(it, ItemDto.class)))
             .collectList(),
-            itemService.count(), (itemsDto, count) ->
-                ResponseEntity.ok()
-                .header("X-Total-Count", String.valueOf(count))
-                .body(jsonConvService.conv(itemsDto))
-            );
+            itemService.count())
+                .map(tuple -> {
+                    List<ItemDto> items = tuple.getT1();
+                    Long count = tuple.getT2();
+
+                    return ResponseEntity.ok()
+                            .header("X-Total-Count", String.valueOf(count))
+                            .body(items);
+                });
     }
 
-    public Mono<ResponseEntity<String>> findById(Long id) {
+    public Mono<ResponseEntity<List<ItemDto>>> findById(Long id) {
         return itemService.findById(id)
-                .map((item) -> ResponseEntity.ok(jsonConvService.conv(
-                        conversionService.convert(item, ItemDto.class)
-                    )))
+                .map((item) -> ResponseEntity.ok(List.of(conversionService.convert(item, ItemDto.class))
+                ))
                 .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
     }
 
-    public Mono<ResponseEntity<String>> findByName(String name) {
+    public Mono<ResponseEntity<List<ItemDto>>> findByName(String name) {
         return itemService.findByName(name)
-                .map((item) -> ResponseEntity.ok(jsonConvService.conv(
-                        conversionService.convert(item, ItemDto.class)
-                    )))
+                .map((item) -> ResponseEntity.ok(List.of(conversionService.convert(item, ItemDto.class))
+                    ))
                 .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
     }
 }
