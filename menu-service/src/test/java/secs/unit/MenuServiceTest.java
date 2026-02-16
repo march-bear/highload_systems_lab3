@@ -6,11 +6,13 @@ import org.itmo.secs.model.dto.DishDto;
 import org.itmo.secs.model.dto.UserDto;
 import org.itmo.secs.model.entities.Menu;
 import org.itmo.secs.model.entities.enums.Meal;
+import org.itmo.secs.notification.MenuEventProducer;
 import org.itmo.secs.repositories.MenuRepository;
 import org.itmo.secs.services.MenuDishesService;
 import org.itmo.secs.services.MenuService;
 import org.itmo.secs.utils.exceptions.DataIntegrityViolationException;
 import org.itmo.secs.utils.exceptions.ItemNotFoundException;
+import org.itmo.secs.utils.exceptions.ServiceUnavailableException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -21,6 +23,7 @@ import reactor.test.StepVerifier;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -30,12 +33,14 @@ class MenuServiceTest {
     private final MenuDishesService menuDishesService = Mockito.mock(MenuDishesService.class);
     private final DishServiceClient dishServiceClient = Mockito.mock(DishServiceClient.class);
     private final UserServiceClient userServiceClient = Mockito.mock(UserServiceClient.class);
+    private final MenuEventProducer menuEventProducer = Mockito.mock(MenuEventProducer.class);
 
     private final MenuService menuService = new MenuService(
             menuRepository,
             menuDishesService,
             dishServiceClient,
-            userServiceClient
+            userServiceClient,
+            menuEventProducer
     );
 
     private Menu testMenu;
@@ -57,6 +62,12 @@ class MenuServiceTest {
         testMenu.setMeal(Meal.BREAKFAST);
         testMenu.setDate(testDate);
         testMenu.setUserId(1L);
+
+        // Настройка моков для event producer
+        doNothing().when(menuEventProducer).sendMenuCreated(any());
+        doNothing().when(menuEventProducer).sendMenuDeleted(any());
+        doNothing().when(menuEventProducer).sendMenuUpdated(any(), any());
+        doNothing().when(menuEventProducer).sendMenuUpdatedDish(any(), anyLong(), anyBoolean());
     }
 
     @Test
@@ -78,26 +89,28 @@ class MenuServiceTest {
                 testMenu.getUserId()
         );
         verify(menuRepository).save(testMenu);
+        verify(menuEventProducer).sendMenuCreated(testMenu);
     }
 
-//    @Test
-//    void save_ShouldThrowException_WhenMenuAlreadyExists() {
-//        // Arrange
-//        when(menuRepository.findByMealAndDateAndUserId(any(), any(), any()))
-//                .thenReturn(Mono.just(testMenu));
-//
-//        // Act & Assert
-//        StepVerifier.create(menuService.save(testMenu))
-//                .expectError(DataIntegrityViolationException.class)
-//                .verify();
-//
-//        verify(menuRepository).findByMealAndDateAndUserId(
-//                testMenu.getMeal(),
-//                testMenu.getDate(),
-//                testMenu.getUserId()
-//        );
-//        verify(menuRepository, never()).save(any());
-//    }
+    @Test
+    void save_ShouldThrowException_WhenMenuAlreadyExists() {
+        // Arrange
+        when(menuRepository.findByMealAndDateAndUserId(any(), any(), any()))
+                .thenReturn(Mono.just(testMenu));
+
+        // Act & Assert
+        StepVerifier.create(menuService.save(testMenu))
+                .expectError(DataIntegrityViolationException.class)
+                .verify();
+
+        verify(menuRepository).findByMealAndDateAndUserId(
+                testMenu.getMeal(),
+                testMenu.getDate(),
+                testMenu.getUserId()
+        );
+        verify(menuRepository, never()).save(any());
+        verify(menuEventProducer, never()).sendMenuCreated(any());
+    }
 
     @Test
     void updateForUser_ShouldUpdateMenu_WhenValidInput() {
@@ -122,6 +135,7 @@ class MenuServiceTest {
                 menu.getMeal() == Meal.LUNCH &&
                         menu.getDate().equals(testDate.plusDays(1))
         ));
+        verify(menuEventProducer).sendMenuUpdated(eq(testMenu), any(Menu.class));
     }
 
     @Test
@@ -135,6 +149,7 @@ class MenuServiceTest {
                 .verify();
 
         verify(menuRepository, never()).save(any());
+        verify(menuEventProducer, never()).sendMenuUpdated(any(), any());
     }
 
     @Test
@@ -148,6 +163,7 @@ class MenuServiceTest {
                 .verify();
 
         verify(menuRepository, never()).save(any());
+        verify(menuEventProducer, never()).sendMenuUpdated(any(), any());
     }
 
     @Test
@@ -175,6 +191,7 @@ class MenuServiceTest {
                 .verify();
 
         verify(menuRepository, never()).save(any());
+        verify(menuEventProducer, never()).sendMenuUpdated(any(), any());
     }
 
     @Test
@@ -188,6 +205,7 @@ class MenuServiceTest {
                 .verifyComplete();
 
         verify(menuRepository).deleteById(1L);
+        verify(menuEventProducer).sendMenuDeleted(testMenu);
     }
 
     @Test
@@ -201,6 +219,7 @@ class MenuServiceTest {
                 .verify();
 
         verify(menuRepository, never()).deleteById(anyLong());
+        verify(menuEventProducer, never()).sendMenuDeleted(any());
     }
 
     @Test
@@ -214,6 +233,7 @@ class MenuServiceTest {
                 .verifyComplete();
 
         verify(menuRepository).deleteById(1L);
+        verify(menuEventProducer).sendMenuDeleted(testMenu);
     }
 
     @Test
@@ -227,6 +247,7 @@ class MenuServiceTest {
                 .verify();
 
         verify(menuRepository, never()).deleteById(anyLong());
+        verify(menuEventProducer, never()).sendMenuDeleted(any());
     }
 
     @Test
@@ -241,6 +262,17 @@ class MenuServiceTest {
     }
 
     @Test
+    void findById_ShouldThrowException_WhenNotFound() {
+        // Arrange
+        when(menuRepository.findById(1L)).thenReturn(Mono.empty());
+
+        // Act & Assert
+        StepVerifier.create(menuService.findById(1L))
+                .expectError(ItemNotFoundException.class)
+                .verify();
+    }
+
+    @Test
     void findByKey_ShouldReturnMenu_WhenExists() {
         // Arrange
         when(menuRepository.findByMealAndDateAndUserId(
@@ -250,6 +282,18 @@ class MenuServiceTest {
         // Act & Assert
         StepVerifier.create(menuService.findByKey(Meal.BREAKFAST, testDate, 1L))
                 .expectNext(testMenu)
+                .verifyComplete();
+    }
+
+    @Test
+    void findByKey_ShouldReturnEmpty_WhenNotExists() {
+        // Arrange
+        when(menuRepository.findByMealAndDateAndUserId(
+                Meal.BREAKFAST, testDate, 1L))
+                .thenReturn(Mono.empty());
+
+        // Act & Assert
+        StepVerifier.create(menuService.findByKey(Meal.BREAKFAST, testDate, 1L))
                 .verifyComplete();
     }
 
@@ -273,6 +317,7 @@ class MenuServiceTest {
                 .verifyComplete();
 
         verify(menuDishesService).saveByIds(menuId, dishId);
+        verify(menuEventProducer).sendMenuUpdatedDish(eq(testMenu), eq(dishId), eq(false));
     }
 
     @Test
@@ -290,6 +335,25 @@ class MenuServiceTest {
                 .verify();
 
         verify(menuDishesService, never()).saveByIds(any(), any());
+        verify(menuEventProducer, never()).sendMenuUpdatedDish(any(), anyLong(), anyBoolean());
+    }
+
+    @Test
+    void includeDishToMenuForUser_ShouldThrowException_WhenUserIsNotOwner() {
+        // Arrange
+        Long menuId = 1L;
+        Long dishId = 100L;
+        Long userId = 999L;
+
+        when(menuRepository.findById(menuId)).thenReturn(Mono.just(testMenu));
+
+        // Act & Assert
+        StepVerifier.create(menuService.includeDishToMenuForUser(dishId, menuId, userId))
+                .expectError(ItemNotFoundException.class)
+                .verify();
+
+        verify(menuDishesService, never()).saveByIds(any(), any());
+        verify(menuEventProducer, never()).sendMenuUpdatedDish(any(), anyLong(), anyBoolean());
     }
 
     @Test
@@ -310,6 +374,7 @@ class MenuServiceTest {
 
         verify(menuDishesService, never()).saveByIds(any(), any());
         verify(dishServiceClient, never()).getById(any());
+        verify(menuEventProducer, never()).sendMenuUpdatedDish(any(), anyLong(), anyBoolean());
     }
 
     @Test
@@ -331,6 +396,29 @@ class MenuServiceTest {
                 .verify();
 
         verify(menuDishesService, never()).saveByIds(any(), any());
+        verify(menuEventProducer, never()).sendMenuUpdatedDish(any(), anyLong(), anyBoolean());
+    }
+
+    @Test
+    void includeDishToMenuForUser_ShouldPropagateServiceUnavailableException() {
+        // Arrange
+        Long menuId = 1L;
+        Long dishId = 100L;
+        Long userId = 1L;
+
+        when(menuRepository.findById(menuId)).thenReturn(Mono.just(testMenu));
+        when(menuDishesService.getDishesIdByMenuId(menuId))
+                .thenReturn(Flux.just(50L, 60L));
+        when(dishServiceClient.getById(dishId))
+                .thenReturn(Mono.error(new ServiceUnavailableException("Dish service unavailable")));
+
+        // Act & Assert
+        StepVerifier.create(menuService.includeDishToMenuForUser(dishId, menuId, userId))
+                .expectError(ServiceUnavailableException.class)
+                .verify();
+
+        verify(menuDishesService, never()).saveByIds(any(), any());
+        verify(menuEventProducer, never()).sendMenuUpdatedDish(any(), anyLong(), anyBoolean());
     }
 
     @Test
@@ -351,6 +439,7 @@ class MenuServiceTest {
                 .verifyComplete();
 
         verify(menuDishesService).deleteByIds(menuId, dishId);
+        verify(menuEventProducer).sendMenuUpdatedDish(eq(testMenu), eq(dishId), eq(true));
     }
 
     @Test
@@ -370,6 +459,7 @@ class MenuServiceTest {
                 .verify();
 
         verify(menuDishesService, never()).deleteByIds(any(), any());
+        verify(menuEventProducer, never()).sendMenuUpdatedDish(any(), anyLong(), anyBoolean());
     }
 
     @Test
@@ -415,6 +505,20 @@ class MenuServiceTest {
     }
 
     @Test
+    void makeListOfDishesForUser_ShouldThrowException_WhenUserIsNotOwner() {
+        // Arrange
+        Long menuId = 1L;
+        Long userId = 999L;
+
+        when(menuRepository.findById(menuId)).thenReturn(Mono.just(testMenu));
+
+        // Act & Assert
+        StepVerifier.create(menuService.makeListOfDishesForUser(menuId, userId))
+                .expectError(ItemNotFoundException.class)
+                .verify();
+    }
+
+    @Test
     void findAllByUserId_ShouldReturnUserMenus_WithPagination() {
         // Arrange
         int page = 0;
@@ -443,6 +547,29 @@ class MenuServiceTest {
     }
 
     @Test
+    void findAllByUserId_ShouldReturnEmpty_WhenNoMenusForUser() {
+        // Arrange
+        int page = 0;
+        int size = 10;
+        Long userId = 999L;
+
+        Menu menu1 = new Menu();
+        menu1.setId(1L);
+        menu1.setUserId(1L);
+
+        Menu menu2 = new Menu();
+        menu2.setId(2L);
+        menu2.setUserId(2L);
+
+        when(menuRepository.findAll())
+                .thenReturn(Flux.just(menu1, menu2));
+
+        // Act & Assert
+        StepVerifier.create(menuService.findAllByUserId(page, size, userId))
+                .verifyComplete();
+    }
+
+    @Test
     void findAll_ShouldReturnAllMenus_WithPagination() {
         // Arrange
         int page = 0;
@@ -463,6 +590,30 @@ class MenuServiceTest {
         // Act & Assert
         StepVerifier.create(menuService.findAll(page, size))
                 .expectNextCount(2) // Только первые 2 из-за пагинации
+                .verifyComplete();
+    }
+
+    @Test
+    void findAll_ShouldApplyPaginationCorrectly() {
+        // Arrange
+        int page = 1;
+        int size = 1;
+
+        Menu menu1 = new Menu();
+        menu1.setId(1L);
+
+        Menu menu2 = new Menu();
+        menu2.setId(2L);
+
+        Menu menu3 = new Menu();
+        menu3.setId(3L);
+
+        when(menuRepository.findAll())
+                .thenReturn(Flux.just(menu1, menu2, menu3));
+
+        // Act & Assert
+        StepVerifier.create(menuService.findAll(page, size))
+                .expectNextCount(1) // Только 2-й элемент (индекс 1)
                 .verifyComplete();
     }
 
@@ -504,5 +655,20 @@ class MenuServiceTest {
                 .verify();
 
         verify(menuRepository, never()).findAllByUserId(any());
+    }
+
+    @Test
+    void findAllByUsername_ShouldReturnEmpty_WhenUserHasNoMenus() {
+        // Arrange
+        String username = "TestUser";
+
+        when(userServiceClient.getByName(testAuthToken, username))
+                .thenReturn(Mono.just(testUserDto));
+        when(menuRepository.findAllByUserId(1L))
+                .thenReturn(Flux.empty());
+
+        // Act & Assert
+        StepVerifier.create(menuService.findAllByUsername(testAuthToken, username))
+                .verifyComplete();
     }
 }

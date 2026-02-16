@@ -39,7 +39,7 @@ public class MenuService {
                                "Menu with given key already exists"
                     ))
                 )
-                .switchIfEmpty(menuRep.save(menu))
+                .switchIfEmpty(Mono.defer(() -> menuRep.save(menu)))
                 .doOnSuccess(
                         savedMenu -> menuEventProducer.sendMenuCreated(
                                 Objects.requireNonNull(savedMenu)

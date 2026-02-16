@@ -1,6 +1,7 @@
 package org.itmo.secs.unit;
 
 import org.itmo.secs.model.entities.Item;
+import org.itmo.secs.notification.ItemEventProducer;
 import org.itmo.secs.repositories.ItemRepository;
 import org.itmo.secs.services.ItemService;
 import org.itmo.secs.utils.exceptions.DataIntegrityViolationException;
@@ -9,19 +10,23 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.util.List;
 import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class ItemServiceTest {
 
     private final ItemRepository itemRepository = mock(ItemRepository.class);
-    private final ItemService itemService = new ItemService(itemRepository);
+    private final ItemEventProducer itemEventProducer = mock(ItemEventProducer.class);
+    private final ItemService itemService = new ItemService(itemRepository, itemEventProducer);
 
     private Item item;
+    private Item updatedItem;
 
     @BeforeEach
     void setUp() {
@@ -32,6 +37,19 @@ class ItemServiceTest {
         item.setProtein(20);
         item.setFats(10);
         item.setCarbs(50);
+
+        updatedItem = new Item();
+        updatedItem.setId(1L);
+        updatedItem.setName("Updated Name");
+        updatedItem.setCalories(400);
+        updatedItem.setProtein(25);
+        updatedItem.setFats(15);
+        updatedItem.setCarbs(60);
+
+        // Моки для event producer (по умолчанию ничего не делаем)
+        doNothing().when(itemEventProducer).sendItemCreated(any());
+        doNothing().when(itemEventProducer).sendItemUpdated(any(), any());
+        doNothing().when(itemEventProducer).sendItemDeleted(any());
     }
 
     // ---------- SAVE ----------
@@ -46,6 +64,7 @@ class ItemServiceTest {
                 .verifyComplete();
 
         verify(itemRepository).save(item);
+        verify(itemEventProducer).sendItemCreated(item);
     }
 
     @Test
@@ -57,6 +76,7 @@ class ItemServiceTest {
                 .verify();
 
         verify(itemRepository, never()).save(any());
+        verify(itemEventProducer, never()).sendItemCreated(any());
     }
 
     // ---------- UPDATE ----------
@@ -67,18 +87,27 @@ class ItemServiceTest {
         when(itemRepository.findByName("Updated Name")).thenReturn(Optional.empty());
         when(itemRepository.save(any(Item.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Item updatedItem = new Item();
-        updatedItem.setId(1L);
-        updatedItem.setName("Updated Name");
-        updatedItem.setCalories(400);
-        updatedItem.setProtein(25);
-        updatedItem.setFats(15);
-        updatedItem.setCarbs(60);
+        StepVerifier.create(itemService.update(updatedItem))
+                .verifyComplete();
+
+        verify(itemRepository).save(any(Item.class));
+        verify(itemEventProducer).sendItemUpdated(eq(item), eq(updatedItem));
+    }
+
+    @Test
+    void update_ShouldUpdateItem_WhenNameNotChanged() {
+        updatedItem.setName("Test Item"); // То же имя
+
+        when(itemRepository.findById(1L)).thenReturn(Optional.of(item));
+        when(itemRepository.findByName("Test Item")).thenReturn(Optional.of(item));
+        when(itemRepository.save(any(Item.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         StepVerifier.create(itemService.update(updatedItem))
                 .verifyComplete();
 
-        verify(itemRepository).save(any(Item.class));}
+        verify(itemRepository).save(any(Item.class));
+        verify(itemEventProducer).sendItemUpdated(eq(item), eq(updatedItem));
+    }
 
     @Test
     void update_ShouldThrow_WhenItemNotFound() {
@@ -89,6 +118,7 @@ class ItemServiceTest {
                 .verify();
 
         verify(itemRepository, never()).save(any());
+        verify(itemEventProducer, never()).sendItemUpdated(any(), any());
     }
 
     @Test
@@ -109,6 +139,7 @@ class ItemServiceTest {
                 .verify();
 
         verify(itemRepository, never()).save(any());
+        verify(itemEventProducer, never()).sendItemUpdated(any(), any());
     }
 
     // ---------- FIND ----------
@@ -157,6 +188,7 @@ class ItemServiceTest {
                 .verifyComplete();
 
         verify(itemRepository).deleteById(1L);
+        verify(itemEventProducer).sendItemDeleted(item);
     }
 
     @Test
@@ -168,6 +200,7 @@ class ItemServiceTest {
                 .verify();
 
         verify(itemRepository, never()).deleteById(any());
+        verify(itemEventProducer, never()).sendItemDeleted(any());
     }
 
     // ---------- FIND ALL ----------

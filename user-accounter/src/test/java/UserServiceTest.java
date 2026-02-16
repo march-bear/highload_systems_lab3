@@ -15,6 +15,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContext;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import reactor.util.context.Context;
@@ -63,6 +64,8 @@ class UserServiceTest {
     void create_ShouldSaveUser_WhenUserDoesNotExist() {
         when(userRepository.findByUsername(testUser.getUsername())).thenReturn(Mono.empty());
         when(userRepository.save(testUser)).thenReturn(Mono.just(testUser));
+        when(userRepository.findAllByRole(UserRole.ADMIN))
+                .thenReturn(Flux.empty());
 
         StepVerifier.create(userService.create(testUser))
                 .expectNext(testUser)
@@ -98,6 +101,8 @@ class UserServiceTest {
                 .thenReturn(Mono.just(existingUser));
         when(userRepository.save(any(User.class)))
                 .thenReturn(Mono.just(updatedUser));
+        when(userRepository.findAllByRole(UserRole.ADMIN))
+                .thenReturn(Flux.empty());
 
         StepVerifier.create(userService.updateRole(existingUser.getId(), UserRole.MODERATOR))
                 .expectNext(updatedUser)
@@ -140,6 +145,8 @@ class UserServiceTest {
                 .thenReturn(Mono.just(existingUser));
         when(userRepository.deleteById(existingUser.getId()))
                 .thenReturn(Mono.empty());
+        when(userRepository.findAllByRole(UserRole.ADMIN))
+                .thenReturn(Flux.empty());
 
         StepVerifier.create(userService.deleteById(existingUser.getId()))
                 .verifyComplete();

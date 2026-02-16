@@ -7,6 +7,7 @@ import io.jsonwebtoken.security.Keys;
 import org.itmo.secs.model.dto.*;
 import org.itmo.secs.model.entities.Dish;
 import org.itmo.secs.model.entities.Item;
+import org.itmo.secs.notification.DishEventProducer;
 import org.itmo.secs.repositories.DishRepository;
 import org.itmo.secs.repositories.ItemRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -41,6 +43,9 @@ class DishControllerTest {
 
     @LocalServerPort
     private int port;
+
+    @MockitoBean
+    private DishEventProducer dishEventProducer;
 
     @Container
     static PostgreSQLContainer<?> pgContainer = new PostgreSQLContainer<>("postgres:15-alpine")

@@ -9,6 +9,7 @@ import org.itmo.secs.client.DishServiceClient;
 import org.itmo.secs.client.UserServiceClient;
 import org.itmo.secs.model.dto.*;
 import org.itmo.secs.model.entities.enums.Meal;
+import org.itmo.secs.notification.MenuEventProducer;
 import org.itmo.secs.repositories.MenuRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,6 +58,9 @@ class MenuControllerTest {
 
     @MockitoBean
     private DishServiceClient dishServiceClient;
+
+    @MockitoBean
+    private MenuEventProducer menuEventProducer ;
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:15-alpine")

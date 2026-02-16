@@ -2,6 +2,7 @@ package org.itmo.secs.unit;
 
 import org.itmo.secs.model.entities.Dish;
 import org.itmo.secs.model.entities.Item;
+import org.itmo.secs.notification.DishEventProducer;
 import org.itmo.secs.repositories.DishRepository;
 import org.itmo.secs.services.DishService;
 import org.itmo.secs.services.ItemDishService;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.util.Pair;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -25,6 +27,7 @@ class DishServiceTest {
     private final ItemDishService itemDishService = mock(ItemDishService.class);
     private final DishRepository dishRepository = mock(DishRepository.class);
     private final ItemService itemService = mock(ItemService.class);
+    private final DishEventProducer dishEventProducer = mock(DishEventProducer.class);
 
     private DishService dishService;
 
@@ -33,7 +36,7 @@ class DishServiceTest {
 
     @BeforeEach
     void setUp() {
-        dishService = new DishService(itemDishService, dishRepository, itemService);
+        dishService = new DishService(itemDishService, dishRepository, itemService, dishEventProducer);
 
         dish = new Dish();
         dish.setId(1L);
@@ -41,6 +44,17 @@ class DishServiceTest {
 
         item = new Item();
         item.setId(10L);
+        item.setName("Test Item");
+        item.setCalories(100);
+        item.setProtein(10);
+        item.setFats(5);
+        item.setCarbs(20);
+
+        // Настройка моков для event producer
+        doNothing().when(dishEventProducer).sendDishCreated(any());
+        doNothing().when(dishEventProducer).sendDishDeleted(any());
+        doNothing().when(dishEventProducer).sendDishUpdated(any(), any());
+        doNothing().when(dishEventProducer).sendDishUpdatedDish(any(), anyLong(), anyInt());
     }
 
     // ---------- SAVE ----------
@@ -55,6 +69,7 @@ class DishServiceTest {
                 .verifyComplete();
 
         verify(dishRepository).save(dish);
+        verify(dishEventProducer).sendDishCreated(dish);
     }
 
     @Test
@@ -66,6 +81,7 @@ class DishServiceTest {
                 .verify();
 
         verify(dishRepository, never()).save(any());
+        verify(dishEventProducer, never()).sendDishCreated(any());
     }
 
     // ---------- ADD ITEM ----------
@@ -81,17 +97,32 @@ class DishServiceTest {
                 .verifyComplete();
 
         verify(itemDishService).updateItemDishCount(item, dish, 5);
+        verify(dishEventProducer).sendDishUpdatedDish(dish, 10L, 5);
     }
 
     @Test
     void addItem_ShouldThrow_WhenDishNotFound() {
-        Long dishId = 1L;
         when(dishRepository.findById(1L)).thenReturn(java.util.Optional.empty());
 
         StepVerifier.create(dishService.addItem(10L, 1L, 5))
-                .expectErrorMatches(throwable ->
-                        throwable instanceof ItemNotFoundException
-                ).verify();
+                .expectError(ItemNotFoundException.class)
+                .verify();
+
+        verify(itemDishService, never()).updateItemDishCount(any(), any(), anyInt());
+        verify(dishEventProducer, never()).sendDishUpdatedDish(any(), anyLong(), anyInt());
+    }
+
+    @Test
+    void addItem_ShouldThrow_WhenItemNotFound() {
+        when(dishRepository.findById(1L)).thenReturn(java.util.Optional.of(dish));
+        when(itemService.findById(10L)).thenReturn(Mono.empty());
+
+        StepVerifier.create(dishService.addItem(10L, 1L, 5))
+                .expectError(ItemNotFoundException.class)
+                .verify();
+
+        verify(itemDishService, never()).updateItemDishCount(any(), any(), anyInt());
+        verify(dishEventProducer, never()).sendDishUpdatedDish(any(), anyLong(), anyInt());
     }
 
     // ---------- DELETE ITEM ----------
@@ -106,6 +137,101 @@ class DishServiceTest {
                 .verifyComplete();
 
         verify(itemDishService).delete(item, dish);
+        verify(dishEventProducer).sendDishUpdatedDish(dish, 10L, 0);
+    }
+
+    @Test
+    void deleteItem_ShouldThrow_WhenDishNotFound() {
+        when(dishRepository.findById(1L)).thenReturn(java.util.Optional.empty());
+
+        StepVerifier.create(dishService.deleteItem(10L, 1L))
+                .expectError(ItemNotFoundException.class)
+                .verify();
+
+        verify(itemDishService, never()).delete(any(), any());
+        verify(dishEventProducer, never()).sendDishUpdatedDish(any(), anyLong(), anyInt());
+    }
+
+    @Test
+    void deleteItem_ShouldThrow_WhenItemNotFound() {
+        when(dishRepository.findById(1L)).thenReturn(java.util.Optional.of(dish));
+        when(itemService.findById(10L)).thenReturn(Mono.empty());
+
+        StepVerifier.create(dishService.deleteItem(10L, 1L))
+                .expectError(ItemNotFoundException.class)
+                .verify();
+
+        verify(itemDishService, never()).delete(any(), any());
+        verify(dishEventProducer, never()).sendDishUpdatedDish(any(), anyLong(), anyInt());
+    }
+
+    // ---------- UPDATE NAME ----------
+
+    @Test
+    void updateName_ShouldUpdate_WhenValid() {
+        Dish updatedDish = new Dish();
+        updatedDish.setId(1L);
+        updatedDish.setName("Updated Name");
+
+        when(dishRepository.findById(1L)).thenReturn(java.util.Optional.of(dish));
+        when(dishRepository.findByName("Updated Name")).thenReturn(java.util.Optional.empty());
+        when(dishRepository.save(updatedDish)).thenReturn(updatedDish);
+
+        StepVerifier.create(dishService.updateName(updatedDish))
+                .verifyComplete();
+
+        verify(dishRepository).save(updatedDish);
+        verify(dishEventProducer).sendDishUpdated(dish, updatedDish);
+    }
+
+    @Test
+    void updateName_ShouldWork_WhenNameNotChanged() {
+        Dish updatedDish = new Dish();
+        updatedDish.setId(1L);
+        updatedDish.setName("Test"); // То же имя
+
+        when(dishRepository.findById(1L)).thenReturn(java.util.Optional.of(dish));
+        when(dishRepository.findByName("Test")).thenReturn(java.util.Optional.of(dish));
+        when(dishRepository.save(updatedDish)).thenReturn(updatedDish);
+
+        StepVerifier.create(dishService.updateName(updatedDish))
+                .verifyComplete();
+
+        verify(dishRepository).save(updatedDish);
+        verify(dishEventProducer).sendDishUpdated(dish, updatedDish);
+    }
+
+    @Test
+    void updateName_ShouldThrow_WhenDishNotFound() {
+        when(dishRepository.findById(1L)).thenReturn(java.util.Optional.empty());
+
+        StepVerifier.create(dishService.updateName(dish))
+                .expectError(ItemNotFoundException.class)
+                .verify();
+
+        verify(dishRepository, never()).save(any());
+        verify(dishEventProducer, never()).sendDishUpdated(any(), any());
+    }
+
+    @Test
+    void updateName_ShouldThrow_WhenNameExistsForDifferentDish() {
+        Dish existingDish = new Dish();
+        existingDish.setId(2L);
+        existingDish.setName("Existing Name");
+
+        Dish updatedDish = new Dish();
+        updatedDish.setId(1L);
+        updatedDish.setName("Existing Name");
+
+        when(dishRepository.findById(1L)).thenReturn(java.util.Optional.of(dish));
+        when(dishRepository.findByName("Existing Name")).thenReturn(java.util.Optional.of(existingDish));
+
+        StepVerifier.create(dishService.updateName(updatedDish))
+                .expectError(DataIntegrityViolationException.class)
+                .verify();
+
+        verify(dishRepository, never()).save(any());
+        verify(dishEventProducer, never()).sendDishUpdated(any(), any());
     }
 
     // ---------- FIND ----------
@@ -120,11 +246,27 @@ class DishServiceTest {
     }
 
     @Test
+    void findById_ShouldReturnEmpty_WhenNotFound() {
+        when(dishRepository.findById(1L)).thenReturn(java.util.Optional.empty());
+
+        StepVerifier.create(dishService.findById(1L))
+                .verifyComplete();
+    }
+
+    @Test
     void findByName_ShouldReturnDish() {
         when(dishRepository.findByName("Test")).thenReturn(java.util.Optional.of(dish));
 
         StepVerifier.create(dishService.findByName("Test"))
                 .expectNext(dish)
+                .verifyComplete();
+    }
+
+    @Test
+    void findByName_ShouldReturnEmpty_WhenNotFound() {
+        when(dishRepository.findByName("Non Existent")).thenReturn(java.util.Optional.empty());
+
+        StepVerifier.create(dishService.findByName("Non Existent"))
                 .verifyComplete();
     }
 
@@ -138,6 +280,7 @@ class DishServiceTest {
                 .verifyComplete();
 
         verify(dishRepository).deleteById(1L);
+        verify(dishEventProducer).sendDishDeleted(dish);
     }
 
     @Test
@@ -147,12 +290,30 @@ class DishServiceTest {
         StepVerifier.create(dishService.delete(1L))
                 .expectError(ItemNotFoundException.class)
                 .verify();
+
+        verify(dishRepository, never()).deleteById(any());
+        verify(dishEventProducer, never()).sendDishDeleted(any());
     }
 
     // ---------- MAKE LIST ----------
 
     @Test
-    void makeList_ShouldReturnFlux() {
+    void makeListOfItems_ShouldReturnFlux() {
+        org.itmo.secs.model.entities.ItemDish itemDish = new org.itmo.secs.model.entities.ItemDish();
+        itemDish.setItem(item);
+        itemDish.setDish(dish);
+        itemDish.setCount(5);
+
+        when(dishRepository.findById(1L)).thenReturn(java.util.Optional.of(dish));
+        when(itemDishService.findAllByDishId(1L)).thenReturn(Flux.just(itemDish));
+
+        StepVerifier.create(dishService.makeListOfItems(1L))
+                .expectNext(Pair.of(item, 5))
+                .verifyComplete();
+    }
+
+    @Test
+    void makeListOfItems_ShouldReturnEmpty_WhenNoItems() {
         when(dishRepository.findById(1L)).thenReturn(java.util.Optional.of(dish));
         when(itemDishService.findAllByDishId(1L)).thenReturn(Flux.empty());
 
@@ -160,15 +321,34 @@ class DishServiceTest {
                 .verifyComplete();
     }
 
+    @Test
+    void makeListOfItems_ShouldThrow_WhenDishNotFound() {
+        when(dishRepository.findById(1L)).thenReturn(java.util.Optional.empty());
+
+        StepVerifier.create(dishService.makeListOfItems(1L))
+                .expectError(ItemNotFoundException.class)
+                .verify();
+    }
+
     // ---------- FIND ALL ----------
 
     @Test
     void findAll_ShouldReturnFlux() {
+        List<Dish> dishesList = List.of(dish);
         when(dishRepository.findAll(any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(dish)));
+                .thenReturn(new PageImpl<>(dishesList));
 
         StepVerifier.create(dishService.findAll(0, 10))
                 .expectNext(dish)
+                .verifyComplete();
+    }
+
+    @Test
+    void findAll_ShouldReturnEmptyFlux() {
+        when(dishRepository.findAll(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        StepVerifier.create(dishService.findAll(0, 10))
                 .verifyComplete();
     }
 }
