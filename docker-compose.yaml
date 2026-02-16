@@ -9,8 +9,8 @@ services:
     ports:
       - "2181:2181"
     volumes:
-      - ./data/zookeeper:/var/lib/zookeeper/data
-      - ./log/zookeeper:/var/lib/zookeeper/log
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_data:/var/lib/zookeeper/log
     networks:
       - highload-network
 
@@ -288,6 +288,7 @@ volumes:
   menu_service_db_data:
   user_accounter_db_data:
   notification_service_db_data:
+  zookeeper_data:
   kafka-1-data:
 
 networks:
