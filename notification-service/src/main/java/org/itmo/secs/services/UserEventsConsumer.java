@@ -36,7 +36,7 @@ public class UserEventsConsumer {
     }
 
     public void onCreated(JsonNode tree) {
-        long sub = tree.withObjectProperty("user_id").asLong();
+        long sub = tree.get("user_id").asLong();
         long userId = tree.withObjectProperty("data").get("id").asLong();
         String userName = tree.withObjectProperty("data").get("name").asText();
         String userRole = tree.withObjectProperty("data").get("role").asText();
@@ -51,13 +51,14 @@ public class UserEventsConsumer {
                 )
                 .title("Created user, id " + userId)
                 .userId(sub)
+                .isRead(false)
                 .build();
 
-        notifService.save(notification);
+        notifService.save(notification).subscribe();
     }
 
     public void onDeleted(JsonNode tree) {
-        long sub = tree.withObjectProperty("user_id").asLong();
+        long sub = tree.get("user_id").asLong();
         long userId = tree.withObjectProperty("data").get("id").asLong();
         String userName = tree.withObjectProperty("data").get("name").asText();
         String userRole = tree.withObjectProperty("data").get("role").asText();
@@ -72,13 +73,14 @@ public class UserEventsConsumer {
                 )
                 .title("Deleted user, id " + userId)
                 .userId(sub)
+                .isRead(false)
                 .build();
 
-        notifService.save(notification);
+        notifService.save(notification).subscribe();
     }
 
     public void onUpdated(JsonNode tree) {
-        long sub = tree.withObjectProperty("user_id").asLong();
+        long sub = tree.get("user_id").asLong();
         long userId = tree.withObjectProperty("data").get("id").asLong();
         String oldRole = tree.withObjectProperty("data").get("role").get("old").asText();
         String newRole = tree.withObjectProperty("data").get("role").get("new").asText();
@@ -92,9 +94,10 @@ public class UserEventsConsumer {
                 )
                 .title("Updated user role, id " + userId)
                 .userId(sub)
+                .isRead(false)
                 .build();
 
-        notifService.save(notification);
+        notifService.save(notification).subscribe();
     }
 
     public void onError(JsonNode tree) {

@@ -56,9 +56,10 @@ public class ItemEventsConsumer {
                                 + "; fats = " + itemFats
                 )
                 .title("Created item, id " + itemId)
+                .isRead(false)
                 .build();
 
-        notifService.saveForSubscribers(notification);
+        notifService.saveForSubscribers(notification).subscribe();
     }
 
     public void onDeleted(JsonNode tree) {
@@ -81,9 +82,10 @@ public class ItemEventsConsumer {
                                 + "; fats = " + itemFats
                 )
                 .title("Deleted item, id " + itemId)
+                .isRead(false)
                 .build();
 
-        notifService.saveForSubscribers(notification);
+        notifService.saveForSubscribers(notification).subscribe();
     }
 
     public void onUpdated(JsonNode tree) {
@@ -105,9 +107,10 @@ public class ItemEventsConsumer {
                                 + "fats " + itemFats.get("old").asInt()  + " -> " + itemFats.get("new").asInt() + ";"
                         )
                 .title("Updated item, id " + itemId)
+                .isRead(false)
                 .build();
 
-        notifService.saveForSubscribers(notification);
+        notifService.saveForSubscribers(notification).subscribe();
     }
 
     public void onError(JsonNode tree) {

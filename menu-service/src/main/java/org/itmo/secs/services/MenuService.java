@@ -6,7 +6,6 @@ import org.itmo.secs.client.UserServiceClient;
 import org.itmo.secs.model.dto.DishDto;
 import org.itmo.secs.model.entities.Menu;
 import org.itmo.secs.model.entities.enums.Meal;
-import org.itmo.secs.model.events.MenuCreateEvent;
 import org.itmo.secs.notification.MenuEventProducer;
 import org.itmo.secs.repositories.MenuRepository;
 import org.itmo.secs.utils.exceptions.DataIntegrityViolationException;

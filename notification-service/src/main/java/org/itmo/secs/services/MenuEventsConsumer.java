@@ -36,7 +36,7 @@ public class MenuEventsConsumer {
     }
 
     public void onCreated(JsonNode tree) {
-        long menuId = tree.get("id").asLong();
+        long menuId = tree.withObjectProperty("data").get("id").asLong();
         String menuDate = tree.withObjectProperty("data").get("date").asText();
         String menuMeal = tree.withObjectProperty("data").get("meal").asText();
         long menuUserId = tree.withObjectProperty("data").get("user_id").asLong();
@@ -50,7 +50,7 @@ public class MenuEventsConsumer {
                 .isRead(false)
                 .build();
 
-        notifService.save(notification);
+        notifService.save(notification).subscribe();
     }
 
     public void onDeleted(JsonNode tree) {
@@ -65,9 +65,10 @@ public class MenuEventsConsumer {
                 .message("Deleted menu: id = " + menuId + "; meal = " + menuMeal + "; date = " + menuDate + ".")
                 .title("Deleted menu, id " + menuId)
                 .userId(menuUserId)
+                .isRead(false)
                 .build();
 
-        notifService.save(notification);
+        notifService.save(notification).subscribe();
     }
 
     public void onUpdated(JsonNode tree) {
@@ -123,9 +124,10 @@ public class MenuEventsConsumer {
                 .message(message.toString())
                 .title("Updated menu, id " + menuId)
                 .userId(menuUserId)
+                .isRead(false)
                 .build();
 
-        notifService.save(notification);
+        notifService.save(notification).subscribe();
     }
 
     public void onError(JsonNode tree) {
