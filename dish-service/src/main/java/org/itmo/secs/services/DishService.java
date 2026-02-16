@@ -3,6 +3,7 @@ package org.itmo.secs.services;
 import lombok.AllArgsConstructor;
 
 import lombok.extern.slf4j.Slf4j;
+import org.itmo.secs.notification.DishEventProducer;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.util.Pair;
@@ -26,6 +27,7 @@ public class DishService {
     private final ItemDishService itemDishService;
     private final DishRepository dishRepository;
     private final ItemService itemService;
+    private final DishEventProducer dishEventProducer;
 
     @Transactional
     public Mono<Dish> save(Dish dish) {
@@ -33,7 +35,7 @@ public class DishService {
              return Mono.error(new DataIntegrityViolationException("Dish with name " + dish.getName() + " already exist"));
         }
 
-        return Mono.just(dishRepository.save(dish));
+        return Mono.just(dishRepository.save(dish)).doOnSuccess(dishEventProducer::sendDishCreated);
     }
 
     @Transactional
@@ -46,6 +48,7 @@ public class DishService {
         return itemService.findById(itemId)
                 .switchIfEmpty(Mono.error(new ItemNotFoundException("Item with id " + itemId + " was not found")))
                 .flatMap(item -> itemDishService.updateItemDishCount(item, dish, count))
+                .doOnSuccess(itemDish -> dishEventProducer.sendDishUpdatedDish(dish, itemId, count))
                 .then();
     }
 
@@ -59,6 +62,7 @@ public class DishService {
 
         return itemService.findById(itemId)
                 .switchIfEmpty(Mono.error(new ItemNotFoundException("Item with id " + itemId + " was not found")))
+                .doOnSuccess(itemDish -> dishEventProducer.sendDishUpdatedDish(dish, itemId, 0))
                 .flatMap(item -> itemDishService.delete(item, dish)).then();
     }
 
@@ -75,6 +79,7 @@ public class DishService {
                             }
                         })
                         .switchIfEmpty(Mono.just(orig))
+                        .doOnSuccess(old -> dishEventProducer.sendDishUpdated(old, dish))
                 )
                 .map(x -> dishRepository.save(dish)).then();
     }
@@ -91,10 +96,11 @@ public class DishService {
 
     @Transactional
     public Mono<Void> delete(Long id) {
-        if (dishRepository.findById(id).isEmpty()) {
+        Dish dish = dishRepository.findById(id).orElse(null);
+        if (dish == null) {
             return Mono.error(new ItemNotFoundException("Dish with id " + id + " was not found"));
         }
-
+        dishEventProducer.sendDishDeleted(dish);
         dishRepository.deleteById(id);
         return Mono.empty();
     }

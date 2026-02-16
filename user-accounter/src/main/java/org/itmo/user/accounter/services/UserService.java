@@ -1,6 +1,7 @@
 package org.itmo.user.accounter.services;
 
 import org.itmo.user.accounter.model.entities.enums.UserRole;
+import org.itmo.user.accounter.notification.UserEventProducer;
 import org.itmo.user.accounter.utils.exceptions.AssigningAdminViaAPIException;
 import org.itmo.user.accounter.utils.exceptions.DataIntegrityViolationException;
 import org.itmo.user.accounter.utils.exceptions.ItemNotFoundException;
@@ -15,12 +16,14 @@ import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Service
 @AllArgsConstructor
 public class UserService implements ReactiveUserDetailsService {
     private UserRepository userRep;
+    private UserEventProducer userEventProducer;
 
     @Transactional
     public Mono<User> create(User user) {
@@ -30,7 +33,10 @@ public class UserService implements ReactiveUserDetailsService {
                                 "User with name " + user.getUsername() + " already exists"
                         ))
                 )
-                .switchIfEmpty(Mono.defer(() -> userRep.save(user)));
+                .switchIfEmpty(Mono.defer(() -> userRep.save(user)))
+                .doOnSuccess(user1 -> getAdminsId()
+                        .doOnNext(id -> userEventProducer.sendUserCreated(user1, id))
+                        .subscribe());
     }
 
     @Transactional
@@ -50,7 +56,11 @@ public class UserService implements ReactiveUserDetailsService {
                                 .password(user.getPassword())
                                 .username(user.getUsername())
                                 .build()
-                ));
+                        )
+                        .doOnSuccess(newUser -> getAdminsId()
+                                .doOnNext(admin -> userEventProducer.sendUserUpdated(user, newUser, admin))
+                                .subscribe())
+                );
     }
 
     @Transactional
@@ -59,7 +69,14 @@ public class UserService implements ReactiveUserDetailsService {
                 .switchIfEmpty(Mono.error(new ItemNotFoundException("User with id " + id + " was not found")))
                 .filter(user -> user.getRole() != UserRole.ADMIN)
                 .switchIfEmpty(Mono.error(new AssigningAdminViaAPIException("ADMIN cannot be deleted via web API")))
+                .doOnSuccess(user -> getAdminsId()
+                        .doOnNext(admin -> userEventProducer.sendUserDeleted(user, admin))
+                        .subscribe())
                 .flatMap(user -> userRep.deleteById(id));
+    }
+
+    public Flux<Long> getAdminsId() {
+        return userRep.findAllByRole(UserRole.ADMIN).map(User::getId);
     }
 
     public Mono<User> findById(Long id) {

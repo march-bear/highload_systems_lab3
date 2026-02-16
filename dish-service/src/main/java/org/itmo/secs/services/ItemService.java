@@ -3,6 +3,7 @@ package org.itmo.secs.services;
 import lombok.AllArgsConstructor;
 
 import org.itmo.secs.model.entities.Item;
+import org.itmo.secs.notification.ItemEventProducer;
 import org.itmo.secs.repositories.ItemRepository;
 import org.itmo.secs.utils.exceptions.*;
 import org.springframework.data.domain.PageRequest;
@@ -20,6 +21,7 @@ import java.util.Objects;
 @AllArgsConstructor
 public class ItemService {
     private final ItemRepository itemRepository;
+    private final ItemEventProducer itemEventProducer;
 
     @Transactional(isolation=Isolation.SERIALIZABLE)
     public Mono<Item> save(Item item) {
@@ -31,7 +33,8 @@ public class ItemService {
                     } else {
                         return Mono.just(itemRepository.save(item));
                     }
-                });
+                })
+                .doOnSuccess(itemEventProducer::sendItemCreated);
     }
     
     @Transactional(isolation=Isolation.SERIALIZABLE)
@@ -47,6 +50,7 @@ public class ItemService {
                             }
                         })
                         .switchIfEmpty(Mono.just(orig))
+                        .doOnSuccess(item1 -> itemEventProducer.sendItemUpdated(orig, item))
                 )
                 .map(x -> itemRepository.save(item)).then();
     }
@@ -72,9 +76,12 @@ public class ItemService {
 
     @Transactional(isolation=Isolation.SERIALIZABLE)
     public Mono<Void> delete(Long id) {
-        if (itemRepository.findById(id).isEmpty()) {
+        Item item = itemRepository.findById(id).orElse(null);
+        if (item == null) {
             return Mono.error(new ItemNotFoundException("Item with id " + id + " was not found"));
         }
+
+        itemEventProducer.sendItemDeleted(item);
         itemRepository.deleteById(id);
         return Mono.empty();
     }
