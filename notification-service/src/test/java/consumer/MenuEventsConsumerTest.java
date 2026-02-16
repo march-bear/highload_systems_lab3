@@ -2,8 +2,8 @@ package consumer;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.itmo.secs.services.MenuEventsConsumer;
-import org.itmo.secs.services.NotificationService;
+import org.itmo.secs.application.services.MenuEventsConsumer;
+import org.itmo.secs.application.services.NotificationService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

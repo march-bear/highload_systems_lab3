@@ -1,9 +1,9 @@
 package service;
 
-import org.itmo.secs.model.entities.Subscription;
-import org.itmo.secs.repositories.SubscriptionRepository;
-import org.itmo.secs.services.SubscriptionService;
-import org.itmo.secs.infrastructure.exceptions.ReExecutionException;
+import org.itmo.secs.domain.model.entities.Subscription;
+import org.itmo.secs.application.repositories.SubscriptionRepository;
+import org.itmo.secs.application.services.SubscriptionService;
+import org.itmo.secs.exception.ReExecutionException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

@@ -1,12 +1,12 @@
 package service;
 
-import org.itmo.secs.model.entities.Notification;
-import org.itmo.secs.model.entities.enums.EventType;
-import org.itmo.secs.repositories.NotificationRepository;
-import org.itmo.secs.services.NotificationService;
-import org.itmo.secs.services.SubscriptionService;
-import org.itmo.secs.infrastructure.exceptions.ItemNotFoundException;
-import org.itmo.secs.infrastructure.exceptions.ReExecutionException;
+import org.itmo.secs.domain.model.entities.Notification;
+import org.itmo.secs.domain.model.entities.enums.EventType;
+import org.itmo.secs.application.repositories.NotificationRepository;
+import org.itmo.secs.application.services.NotificationService;
+import org.itmo.secs.application.services.SubscriptionService;
+import org.itmo.secs.exception.ItemNotFoundException;
+import org.itmo.secs.exception.ReExecutionException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
