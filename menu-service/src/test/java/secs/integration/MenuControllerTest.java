@@ -343,4 +343,30 @@ class MenuControllerTest {
                 .exchange()
                 .expectStatus().isNotFound();
     }
+
+    @Test
+    void updateMenu_success() throws Exception {
+        MenuDto created = create();
+
+        MenuUpdateDto updateDto = new MenuUpdateDto(
+                created.id(),
+                LocalDate.now().plusDays(1),
+                Meal.DINNER.toString()
+        );
+
+        webTestClient.put()
+                .uri("/menu")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + userToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(updateDto)
+                .exchange()
+                .expectStatus().isNoContent();
+
+        MenuDto updated = getMenu(created.id());
+
+        assertThat(updated).isNotNull();
+        assertThat(updated.id()).isEqualTo(created.id());
+        assertThat(updated.meal()).isEqualTo("DINNER");
+        assertThat(updated.date()).isEqualTo(LocalDate.now().plusDays(1));
+    }
 }
