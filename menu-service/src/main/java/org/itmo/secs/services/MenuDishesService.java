@@ -3,7 +3,7 @@ package org.itmo.secs.services;
 import lombok.AllArgsConstructor;
 import org.itmo.secs.model.entities.MenuDishes;
 import org.itmo.secs.repositories.MenuDishesRepository;
-import org.itmo.secs.utils.exceptions.DataIntegrityViolationException;
+import org.itmo.secs.infrastructure.exceptions.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;

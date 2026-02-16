@@ -3,7 +3,7 @@ package org.itmo.secs.services;
 import lombok.AllArgsConstructor;
 import org.itmo.secs.model.entities.Subscription;
 import org.itmo.secs.repositories.SubscriptionRepository;
-import org.itmo.secs.utils.exceptions.ReExecutionException;
+import org.itmo.secs.infrastructure.exceptions.ReExecutionException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;

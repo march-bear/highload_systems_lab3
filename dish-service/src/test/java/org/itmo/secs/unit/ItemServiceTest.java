@@ -1,16 +1,15 @@
 package org.itmo.secs.unit;
 
-import org.itmo.secs.model.entities.Item;
-import org.itmo.secs.notification.ItemEventProducer;
-import org.itmo.secs.repositories.ItemRepository;
-import org.itmo.secs.services.ItemService;
-import org.itmo.secs.utils.exceptions.DataIntegrityViolationException;
-import org.itmo.secs.utils.exceptions.ItemNotFoundException;
+import org.itmo.secs.domain.model.entities.Item;
+import org.itmo.secs.application.repositories.ItemRepository;
+import org.itmo.secs.application.services.ItemService;
+import org.itmo.secs.exception.DataIntegrityViolationException;
+import org.itmo.secs.exception.ItemNotFoundException;
+import org.itmo.secs.infrastructure.notification.ItemEventProducer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.util.List;

@@ -1,7 +1,7 @@
 package org.itmo.secs.model.dto;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import org.itmo.secs.utils.json.LocalDateTimeSerializer;
+import org.itmo.secs.infrastructure.json.LocalDateTimeSerializer;
 
 import java.time.LocalDateTime;
 

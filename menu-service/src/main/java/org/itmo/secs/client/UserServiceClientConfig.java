@@ -1,9 +1,9 @@
 package org.itmo.secs.client;
 
 import feign.codec.ErrorDecoder;
-import org.itmo.secs.utils.exceptions.AccessDeniedException;
-import org.itmo.secs.utils.exceptions.ItemNotFoundException;
-import org.itmo.secs.utils.exceptions.ServiceUnavailableException;
+import org.itmo.secs.infrastructure.exceptions.AccessDeniedException;
+import org.itmo.secs.infrastructure.exceptions.ItemNotFoundException;
+import org.itmo.secs.infrastructure.exceptions.ServiceUnavailableException;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpStatus;
 

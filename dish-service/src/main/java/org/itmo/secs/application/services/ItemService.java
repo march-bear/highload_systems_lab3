@@ -1,0 +1,89 @@
+package org.itmo.secs.application.services;
+
+import lombok.AllArgsConstructor;
+
+import org.itmo.secs.domain.model.entities.Item;
+import org.itmo.secs.exception.DataIntegrityViolationException;
+import org.itmo.secs.exception.ItemNotFoundException;
+import org.itmo.secs.application.repositories.ItemRepository;
+import org.itmo.secs.infrastructure.notification.ItemEventProducer;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
+
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.Flux;
+
+import java.util.Objects;
+
+@Service
+@AllArgsConstructor
+public class ItemService {
+    private final ItemRepository itemRepository;
+    private final ItemEventProducer itemEventProducer;
+
+    @Transactional(isolation=Isolation.SERIALIZABLE)
+    public Mono<Item> save(Item item) {
+        return findByName(item.getName())
+                .hasElement()
+                .flatMap(x -> {
+                    if (x) {
+                        return Mono.error(new DataIntegrityViolationException("Item with name " + item.getName() + " already exist"));
+                    } else {
+                        return Mono.just(itemRepository.save(item));
+                    }
+                })
+                .doOnSuccess(itemEventProducer::sendItemCreated);
+    }
+    
+    @Transactional(isolation=Isolation.SERIALIZABLE)
+    public Mono<Void> update(Item item) {
+        return findById(item.getId())
+                .switchIfEmpty(Mono.error(new ItemNotFoundException("Item with id " + item.getId() + " was not found")))
+                .flatMap(orig -> findByName(item.getName())
+                        .flatMap(x -> {
+                            if (!Objects.equals(x.getId(), item.getId())) {
+                                return Mono.error(new DataIntegrityViolationException("Item with name " + item.getName() + " already exist"));
+                            } else {
+                                return Mono.just(orig);
+                            }
+                        })
+                        .switchIfEmpty(Mono.just(orig))
+                        .doOnSuccess(item1 -> itemEventProducer.sendItemUpdated(orig, item))
+                )
+                .map(x -> itemRepository.save(item)).then();
+    }
+
+    public Mono<Item> findById(Long id) {
+        Item item = itemRepository.findById(id).orElse(null);
+        return (item != null) ? Mono.just(item) : Mono.empty();
+    }
+
+    public Mono<Item> findByName(String name) {
+        Item item = itemRepository.findByName(name).orElse(null);
+        return (item != null) ? Mono.just(item) : Mono.empty();
+    }
+
+    public Flux<Item> findAll(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return Flux.fromIterable(itemRepository.findAll(pageable).toList());
+    }
+
+    public Mono<Long> count() {
+        return Mono.just(itemRepository.count());
+    }
+
+    @Transactional(isolation=Isolation.SERIALIZABLE)
+    public Mono<Void> delete(Long id) {
+        Item item = itemRepository.findById(id).orElse(null);
+        if (item == null) {
+            return Mono.error(new ItemNotFoundException("Item with id " + id + " was not found"));
+        }
+
+        itemEventProducer.sendItemDeleted(item);
+        itemRepository.deleteById(id);
+        return Mono.empty();
+    }
+}

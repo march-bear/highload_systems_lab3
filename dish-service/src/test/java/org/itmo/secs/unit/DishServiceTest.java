@@ -1,14 +1,15 @@
 package org.itmo.secs.unit;
 
-import org.itmo.secs.model.entities.Dish;
-import org.itmo.secs.model.entities.Item;
-import org.itmo.secs.notification.DishEventProducer;
-import org.itmo.secs.repositories.DishRepository;
-import org.itmo.secs.services.DishService;
-import org.itmo.secs.services.ItemDishService;
-import org.itmo.secs.services.ItemService;
-import org.itmo.secs.utils.exceptions.DataIntegrityViolationException;
-import org.itmo.secs.utils.exceptions.ItemNotFoundException;
+import org.itmo.secs.domain.model.entities.ItemDish;
+import org.itmo.secs.domain.model.entities.Dish;
+import org.itmo.secs.domain.model.entities.Item;
+import org.itmo.secs.application.repositories.DishRepository;
+import org.itmo.secs.application.services.DishService;
+import org.itmo.secs.application.services.ItemDishService;
+import org.itmo.secs.application.services.ItemService;
+import org.itmo.secs.exception.DataIntegrityViolationException;
+import org.itmo.secs.exception.ItemNotFoundException;
+import org.itmo.secs.infrastructure.notification.DishEventProducer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
@@ -299,7 +300,7 @@ class DishServiceTest {
 
     @Test
     void makeListOfItems_ShouldReturnFlux() {
-        org.itmo.secs.model.entities.ItemDish itemDish = new org.itmo.secs.model.entities.ItemDish();
+        ItemDish itemDish = new ItemDish();
         itemDish.setItem(item);
         itemDish.setDish(dish);
         itemDish.setCount(5);
