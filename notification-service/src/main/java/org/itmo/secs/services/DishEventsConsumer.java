@@ -21,7 +21,7 @@ public class DishEventsConsumer {
     private final NotificationService notifService;
     private final ObjectMapper objectMapper;
 
-    @KafkaListener(topics = "dish-events", groupId = "dish-events-consumer")
+    @KafkaListener(topics = "dish-events", groupId = "notification-service-consumer")
     public void consumeMessage(String message) {
         try {
             JsonNode notification = objectMapper.readTree(message);

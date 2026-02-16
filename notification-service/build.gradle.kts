@@ -34,8 +34,6 @@ dependencies {
 
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.13.0")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.13.0")
-    implementation("org.flywaydb:flyway-database-postgresql")
-    implementation("org.flywaydb:flyway-core")
 
     runtimeOnly("org.postgresql:postgresql")
 

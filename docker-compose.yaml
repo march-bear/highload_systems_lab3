@@ -1,12 +1,30 @@
 services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SYNC_LIMIT: 2
+    ports:
+      - "2181:2181"
+    volumes:
+      - ./data/zookeeper:/var/lib/zookeeper/data
+      - ./log/zookeeper:/var/lib/zookeeper/log
+    networks:
+      - highload-network
+
   kafka-1:
     image: confluentinc/cp-kafka:7.5.0
     hostname: kafka-1
     container_name: kafka-1
+    depends_on:
+      - zookeeper
     ports:
       - "9092:9092"
     environment:
-      KAFKA_NODE_ID: 1
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_LISTENERS: PLAINTEXT://kafka-1:29092,CONTROLLER://kafka-1:29093,PLAINTEXT_HOST://0.0.0.0:9092
@@ -112,12 +130,44 @@ services:
   dish-service:
     build: ./dish-service
     container_name: highload-dish-service
-    ports:
-      - "8082:8082"
     environment:
       JWT_SECRET_KEY: SSByZWFsbHkgbGlrZSB0aGlzIHVuaXZlcnNpdHksIHNhdmUgbWU
     depends_on:
       dish-service-db:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - highload-network
+
+  notification-service-db:
+    image: postgres:15-alpine
+    container_name: notification-service-db
+    environment:
+      POSTGRES_DB: highload
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5439:5432"
+    volumes:
+      - notification_service_db_data:/var/lib/postgresql/data
+    networks:
+      - highload-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d highload" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  notification-service:
+    build: ./notification-service
+    container_name: highload-notification-service
+    environment:
+      JWT_SECRET_KEY: SSByZWFsbHkgbGlrZSB0aGlzIHVuaXZlcnNpdHksIHNhdmUgbWU
+    depends_on:
+      notification-service-db:
         condition: service_healthy
       config-server:
         condition: service_healthy
@@ -148,11 +198,9 @@ services:
   menu-service:
     build: ./menu-service
     container_name: highload-menu-service
-    ports:
-      - "8083:8083"
     environment:
       JWT_SECRET_KEY: SSByZWFsbHkgbGlrZSB0aGlzIHVuaXZlcnNpdHksIHNhdmUgbWU
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka-1:9092
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka-1:29092
     depends_on:
       menu-service-db:
         condition: service_healthy
@@ -187,8 +235,6 @@ services:
     container_name: highload-user-accounter
     networks:
       - highload-network
-    ports:
-      - "8081:8081"
     environment:
       JWT_SECRET_KEY: SSByZWFsbHkgbGlrZSB0aGlzIHVuaXZlcnNpdHksIHNhdmUgbWU
       JWT_VALIDITY_PERIOD: 300000
@@ -223,8 +269,6 @@ services:
   file-service:
     build: ./file-service
     container_name: highload-file-service
-    ports:
-      - "8090:8090"
     environment:
       JWT_SECRET_KEY: SSByZWFsbHkgbGlrZSB0aGlzIHVuaXZlcnNpdHksIHNhdmUgbWU
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka-1:9092
@@ -243,6 +287,7 @@ volumes:
   file_service_db_data:
   menu_service_db_data:
   user_accounter_db_data:
+  notification_service_db_data:
   kafka-1-data:
 
 networks:

@@ -42,16 +42,9 @@ public class MenuService {
                 )
                 .switchIfEmpty(menuRep.save(menu))
                 .doOnSuccess(
-                        savedMenu -> {
-                            menuEventProducer.sendMenuCreated(
-                                    new MenuCreateEvent(
-                                            savedMenu.getId(),
-                                            savedMenu.getDate(),
-                                            savedMenu.getUserId(),
-                                            savedMenu.getMeal()
-                                    )
-                            );
-                        }
+                        savedMenu -> menuEventProducer.sendMenuCreated(
+                                Objects.requireNonNull(savedMenu)
+                        )
                 );
     }
 

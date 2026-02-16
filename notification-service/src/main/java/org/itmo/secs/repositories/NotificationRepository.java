@@ -13,15 +13,15 @@ import java.util.List;
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
     List<Notification> findAllByUserId(Long userId, Pageable pageable);
 
-    @Query("SELECT n FROM notifications n WHERE n.user_id = :userId and p.is_read = false")
+    @Query("SELECT n FROM Notification n WHERE n.userId = :userId and n.isRead = false")
     List<Notification> findAllUnreadForUser(Long userId);
 
-    @Query("SELECT n FROM notifications n WHERE n.user_id = :userId and p.is_read = false")
+    @Query("SELECT n FROM Notification n WHERE n.userId = :userId and n.isRead = false")
     List<Notification> findAllUnreadForUser(Long userId, Pageable pageable);
 
-    @Query("SELECT n FROM notifications n WHERE n.user_id = :userId and n.type = :type and p.is_read = false")
-    List<Notification> findAllUnreadByTypeForUser(Long userId, EventType type, Pageable pageable);
+    @Query("SELECT n FROM Notification n WHERE n.userId = :userId and n.type = :type and n.isRead = false")
+    List<Notification> findAllUnreadByTypeForUser(Long userId, String type, Pageable pageable);
 
-    @Query("SELECT n FROM notifications n WHERE n.user_id = :userId and n.type = :type")
-    List<Notification> findAllByTypeForUser(Long userId, EventType type, Pageable pageable);
+    @Query("SELECT n FROM Notification n WHERE n.userId = :userId and n.type = :type")
+    List<Notification> findAllByTypeForUser(Long userId, String type, Pageable pageable);
 }

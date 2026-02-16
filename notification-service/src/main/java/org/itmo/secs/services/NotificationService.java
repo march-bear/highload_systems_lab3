@@ -72,10 +72,10 @@ public class NotificationService {
     ) {
         if (unread) {
             return Flux.fromIterable(
-                    notifRep.findAllUnreadByTypeForUser(userId, type, PageRequest.of(pageNum, pageSize))
+                    notifRep.findAllUnreadByTypeForUser(userId, type.name(), PageRequest.of(pageNum, pageSize))
             );
         }
-        return Flux.fromIterable(notifRep.findAllByTypeForUser(userId, type, PageRequest.of(pageNum, pageSize)));
+        return Flux.fromIterable(notifRep.findAllByTypeForUser(userId, type.name(), PageRequest.of(pageNum, pageSize)));
     }
 
     @Transactional

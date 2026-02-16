@@ -19,7 +19,7 @@ public class MenuEventsConsumer {
     private final NotificationService notifService;
     private final ObjectMapper objectMapper;
 
-    @KafkaListener(topics = "menu-events", groupId = "menu-events-consumer")
+    @KafkaListener(topics = "menu-events", groupId = "notification-service-consumer")
     public void consumeMessage(String message) {
         try {
             JsonNode notification = objectMapper.readTree(message);
@@ -36,7 +36,7 @@ public class MenuEventsConsumer {
     }
 
     public void onCreated(JsonNode tree) {
-        long menuId = tree.withObjectProperty("data").get("id").asLong();
+        long menuId = tree.get("id").asLong();
         String menuDate = tree.withObjectProperty("data").get("date").asText();
         String menuMeal = tree.withObjectProperty("data").get("meal").asText();
         long menuUserId = tree.withObjectProperty("data").get("user_id").asLong();
@@ -47,6 +47,7 @@ public class MenuEventsConsumer {
                 .message("Created new menu: id = " + menuId + "; meal = " + menuMeal + "; date = " + menuDate + ".")
                 .title("Created menu, id " + menuId)
                 .userId(menuUserId)
+                .isRead(false)
                 .build();
 
         notifService.save(notification);
