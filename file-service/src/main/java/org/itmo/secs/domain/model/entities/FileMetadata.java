@@ -1,4 +1,4 @@
-package org.itmo.secs.model.entities;
+package org.itmo.secs.domain.model.entities;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

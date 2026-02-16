@@ -1,4 +1,4 @@
-package org.itmo.secs.controllers;
+package org.itmo.secs.api.controllers;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -8,9 +8,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.itmo.secs.model.dto.ErrorDto;
-import org.itmo.secs.model.dto.FileDto;
-import org.itmo.secs.services.FileService;
+import org.itmo.secs.domain.model.dto.ErrorDto;
+import org.itmo.secs.domain.model.dto.FileDto;
+import org.itmo.secs.application.services.FileService;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpHeaders;

@@ -1,12 +1,10 @@
-package org.itmo.secs.utils.exceptions;
+package org.itmo.secs.exception;
 
 import io.jsonwebtoken.ExpiredJwtException;
-import jakarta.validation.ConstraintViolationException;
-import org.itmo.secs.model.dto.ErrorDto;
+import org.itmo.secs.domain.model.dto.ErrorDto;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;

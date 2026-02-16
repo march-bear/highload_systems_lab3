@@ -1,4 +1,4 @@
-package org.itmo.secs.model.dto;
+package org.itmo.secs.domain.model.dto;
 
 public record FileDto (
     Long id,

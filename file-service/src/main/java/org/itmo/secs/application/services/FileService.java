@@ -1,12 +1,12 @@
-package org.itmo.secs.services;
+package org.itmo.secs.application.services;
 
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.itmo.secs.model.entities.FileMetadata;
-import org.itmo.secs.repositories.FileRepository;
-import org.itmo.secs.utils.exceptions.FileStorageException;
-import org.itmo.secs.utils.exceptions.ItemNotFoundException;
+import org.itmo.secs.domain.model.entities.FileMetadata;
+import org.itmo.secs.application.repositories.FileRepository;
+import org.itmo.secs.exception.FileStorageException;
+import org.itmo.secs.exception.ItemNotFoundException;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;

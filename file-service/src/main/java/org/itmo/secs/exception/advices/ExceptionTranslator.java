@@ -1,17 +1,16 @@
-package org.itmo.secs.utils.advices;
+package org.itmo.secs.exception.advices;
 
-import org.itmo.secs.model.dto.ErrorDto;
-import org.itmo.secs.utils.exceptions.*;
+import org.itmo.secs.domain.model.dto.ErrorDto;
+import org.itmo.secs.exception.DataIntegrityViolationException;
+import org.itmo.secs.exception.ItemNotFoundException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import jakarta.validation.ConstraintViolationException;
-import org.springframework.web.reactive.result.method.annotation.ResponseEntityExceptionHandler;
 
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)

@@ -1,4 +1,4 @@
-package org.itmo.secs.utils.exceptions;
+package org.itmo.secs.exception;
 
 public class AccessDeniedException extends RuntimeException {
     public AccessDeniedException(String message) {

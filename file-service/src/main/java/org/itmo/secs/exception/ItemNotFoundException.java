@@ -1,4 +1,4 @@
-package org.itmo.secs.utils.exceptions;
+package org.itmo.secs.exception;
 
 public class ItemNotFoundException extends RuntimeException {
     public ItemNotFoundException(String message) {

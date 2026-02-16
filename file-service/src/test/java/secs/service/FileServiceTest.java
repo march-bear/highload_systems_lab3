@@ -1,10 +1,10 @@
 package secs.service;
 
-import org.itmo.secs.model.entities.FileMetadata;
-import org.itmo.secs.services.FileService;
-import org.itmo.secs.repositories.FileRepository;
-import org.itmo.secs.utils.exceptions.FileStorageException;
-import org.itmo.secs.utils.exceptions.ItemNotFoundException;
+import org.itmo.secs.domain.model.entities.FileMetadata;
+import org.itmo.secs.application.services.FileService;
+import org.itmo.secs.application.repositories.FileRepository;
+import org.itmo.secs.exception.FileStorageException;
+import org.itmo.secs.exception.ItemNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

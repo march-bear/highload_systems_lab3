@@ -1,4 +1,4 @@
-package org.itmo.secs.model.dto;
+package org.itmo.secs.domain.model.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
