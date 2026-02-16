@@ -46,7 +46,7 @@
             </not>
         </preConditions>
         <createTable tableName="subscriptions">
-            <column name="user_id" type="BIGINT" autoIncrement="true">
+            <column name="user_id" type="BIGINT" autoIncrement="false">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
         </createTable>

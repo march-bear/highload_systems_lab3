@@ -7,6 +7,7 @@ import org.itmo.secs.utils.exceptions.ReExecutionException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 
@@ -19,27 +20,30 @@ public class SubscriptionService {
         return subscrRep.findAll().stream().map(Subscription::getUserId).toList();
     }
 
+    public Mono<Subscription> findById(Long id) {
+        return Mono.fromCallable(() -> subscrRep.findById(id).orElse(null))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
     @Transactional
     public Mono<Void> subscribe(Long userId) {
-        Subscription s = subscrRep.findById(userId).orElse(null);
-        if (s != null) {
-            return Mono.error(new ReExecutionException("User with id " + userId + " already has subscription"));
-        }
-
-        subscrRep.save(new Subscription(userId));
-
-        return Mono.empty();
+        return findById(userId)
+                .flatMap(x -> Mono.error(new ReExecutionException("User with id " + userId + " already has subscription")))
+                .switchIfEmpty(
+                        Mono.fromCallable(() -> subscrRep.save(new Subscription(userId)))
+                                .subscribeOn(Schedulers.boundedElastic())
+                )
+                .then();
     }
 
     @Transactional
     public Mono<Void> unsubscribe(Long userId) {
-        Subscription s = subscrRep.findById(userId).orElse(null);
-        if (s == null) {
-            return Mono.error(new ReExecutionException("User with id " + userId + " doesn't have subscription"));
-        }
-
-        subscrRep.deleteById(userId);
-
-        return Mono.empty();
+        return findById(userId)
+                .switchIfEmpty(Mono.error(new ReExecutionException("User with id " + userId + " doesn't have subscription")))
+                .flatMap(subscription ->
+                        Mono.fromRunnable(() -> subscrRep.delete(subscription))
+                                .subscribeOn(Schedulers.boundedElastic())
+                )
+                .then();
     }
 }
