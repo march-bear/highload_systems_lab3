@@ -39,7 +39,8 @@ public class NotificationController {
     @PutMapping
     public Mono<Void> setIsRead(
             @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
-            @Parameter(required = true, name = "id") Long notifId
+            @Parameter(required = true, name = "id")
+            @RequestParam("id") Long notifId
     ) {
         return notifService.setIsReadForUser(userId, notifId);
     }
@@ -56,7 +57,8 @@ public class NotificationController {
     @GetMapping
     public Mono<NotificationDto> findById(
             @Parameter(hidden = true) @RequestHeader("X-User-Id") Long userId,
-            @Parameter(required = true, name = "id") Long notifId
+            @Parameter(required = true, name = "id")
+            @RequestParam("id") Long notifId
     ) {
         return notifService.findForUser(userId, notifId)
                 .map(n -> Objects.requireNonNull(conversionService.convert(n, NotificationDto.class)));

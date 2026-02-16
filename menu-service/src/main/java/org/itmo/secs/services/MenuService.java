@@ -6,7 +6,6 @@ import org.itmo.secs.client.UserServiceClient;
 import org.itmo.secs.model.dto.DishDto;
 import org.itmo.secs.model.entities.Menu;
 import org.itmo.secs.model.entities.enums.Meal;
-import org.itmo.secs.model.events.MenuCreateEvent;
 import org.itmo.secs.notification.MenuEventProducer;
 import org.itmo.secs.repositories.MenuRepository;
 import org.itmo.secs.utils.exceptions.DataIntegrityViolationException;
@@ -42,16 +41,9 @@ public class MenuService {
                 )
                 .switchIfEmpty(menuRep.save(menu))
                 .doOnSuccess(
-                        savedMenu -> {
-                            menuEventProducer.sendMenuCreated(
-                                    new MenuCreateEvent(
-                                            savedMenu.getId(),
-                                            savedMenu.getDate(),
-                                            savedMenu.getUserId(),
-                                            savedMenu.getMeal()
-                                    )
-                            );
-                        }
+                        savedMenu -> menuEventProducer.sendMenuCreated(
+                                Objects.requireNonNull(savedMenu)
+                        )
                 );
     }
 
@@ -71,10 +63,12 @@ public class MenuService {
                         .switchIfEmpty(Mono.just(existingMenu))
                 )
                 .flatMap(existingMenu -> {
-                    existingMenu.setMeal(menu.getMeal());
-                    existingMenu.setDate(menu.getDate());
-                    existingMenu.setUserId(userId);
-                    return menuRep.save(existingMenu);
+                    menu.setUserId(userId);
+                    return menuRep.save(menu).doOnSuccess(
+                            savedMenu -> menuEventProducer.sendMenuUpdated(
+                                    existingMenu, savedMenu
+                            )
+                    );
                 })
                 .then();
     }
@@ -82,6 +76,7 @@ public class MenuService {
     public Mono<Void> delete(Long id) {
         return menuRep.findById(id)
                 .switchIfEmpty(Mono.error(new ItemNotFoundException("Menu with id " + id + " was not found")))
+                .doOnSuccess(x -> menuEventProducer.sendMenuDeleted(x))
                 .flatMap(x -> menuRep.deleteById(id));
     }
 
@@ -89,6 +84,7 @@ public class MenuService {
         return menuRep.findById(id)
                 .filter(menu -> Objects.equals(menu.getUserId(), userId))
                 .switchIfEmpty(Mono.error(new ItemNotFoundException("Menu with id " + id + " was not found")))
+                .doOnSuccess(x -> menuEventProducer.sendMenuDeleted(x))
                 .flatMap(x -> menuRep.deleteById(id));
     }
 
@@ -123,6 +119,7 @@ public class MenuService {
                             }
                         })
                         .flatMap((dish) -> menuDishesService.saveByIds(menuId, dishId))
+                        .doOnSuccess(x -> menuEventProducer.sendMenuUpdatedDish(menu, dishId, false))
                 )
                 .then();
     }
@@ -135,7 +132,9 @@ public class MenuService {
                                 .any(dishId::equals)
                                         .flatMap(res -> {
                                             if (res) {
-                                                return menuDishesService.deleteByIds(menuId, dishId);
+                                                return findById(menuId)
+                                                        .doOnSuccess(x -> menuEventProducer.sendMenuUpdatedDish(x, dishId, true))
+                                                        .flatMap(x -> menuDishesService.deleteByIds(menuId, dishId));
                                             } else {
                                                 return Mono.error(new ItemNotFoundException("Dish with id " + dishId + "is not in menu with id " + menuId));
                                             }

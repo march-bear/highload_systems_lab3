@@ -20,7 +20,7 @@ public class ItemEventsConsumer {
     private final NotificationService notifService;
     private final ObjectMapper objectMapper;
 
-    @KafkaListener(topics = "item-events", groupId = "item-events-consumer")
+    @KafkaListener(topics = "item-events", groupId = "notification-service-consumer")
     public void consumeMessage(String message) {
         try {
             JsonNode notification = objectMapper.readTree(message);
@@ -56,9 +56,10 @@ public class ItemEventsConsumer {
                                 + "; fats = " + itemFats
                 )
                 .title("Created item, id " + itemId)
+                .isRead(false)
                 .build();
 
-        notifService.saveForSubscribers(notification);
+        notifService.saveForSubscribers(notification).subscribe();
     }
 
     public void onDeleted(JsonNode tree) {
@@ -81,9 +82,10 @@ public class ItemEventsConsumer {
                                 + "; fats = " + itemFats
                 )
                 .title("Deleted item, id " + itemId)
+                .isRead(false)
                 .build();
 
-        notifService.saveForSubscribers(notification);
+        notifService.saveForSubscribers(notification).subscribe();
     }
 
     public void onUpdated(JsonNode tree) {
@@ -105,9 +107,10 @@ public class ItemEventsConsumer {
                                 + "fats " + itemFats.get("old").asInt()  + " -> " + itemFats.get("new").asInt() + ";"
                         )
                 .title("Updated item, id " + itemId)
+                .isRead(false)
                 .build();
 
-        notifService.saveForSubscribers(notification);
+        notifService.saveForSubscribers(notification).subscribe();
     }
 
     public void onError(JsonNode tree) {

@@ -3,21 +3,26 @@ package org.itmo.secs.model.entities;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.itmo.secs.model.entities.enums.EventType;
 
 import java.time.LocalDateTime;
 
 @Builder
 @Data
+@Entity
 @Table(name = "notifications")
+@NoArgsConstructor
+@AllArgsConstructor
 public class Notification {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
-    @Column(name = "user_id")
+    @Column(name = "user_id", nullable = false)
     Long userId;
 
     @Enumerated(EnumType.STRING)

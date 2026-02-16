@@ -21,7 +21,7 @@ public class DishEventsConsumer {
     private final NotificationService notifService;
     private final ObjectMapper objectMapper;
 
-    @KafkaListener(topics = "dish-events", groupId = "dish-events-consumer")
+    @KafkaListener(topics = "dish-events", groupId = "notification-service-consumer")
     public void consumeMessage(String message) {
         try {
             JsonNode notification = objectMapper.readTree(message);
@@ -46,9 +46,10 @@ public class DishEventsConsumer {
                 .createdAt(LocalDateTime.now())
                 .message("Created new dish: id = " + dishId + "; name = " + dishName)
                 .title("Created dish, id " + dishId)
+                .isRead(false)
                 .build();
 
-        notifService.saveForSubscribers(notification);
+        notifService.saveForSubscribers(notification).subscribe();
     }
 
     public void onDeleted(JsonNode tree) {
@@ -59,9 +60,10 @@ public class DishEventsConsumer {
                 .createdAt(LocalDateTime.now())
                 .message("Deleted dish: id = " + dishId)
                 .title("Deleted dish, id " + dishId)
+                .isRead(false)
                 .build();
 
-        notifService.saveForSubscribers(notification);
+        notifService.saveForSubscribers(notification).subscribe();
     }
 
     public void onUpdated(JsonNode tree) {
@@ -108,9 +110,10 @@ public class DishEventsConsumer {
                 .createdAt(LocalDateTime.now())
                 .message(message.toString())
                 .title("Updated dish, id " + dishId)
+                .isRead(false)
                 .build();
 
-        notifService.saveForSubscribers(notification);
+        notifService.saveForSubscribers(notification).subscribe();
     }
 
     public void onError(JsonNode tree) {

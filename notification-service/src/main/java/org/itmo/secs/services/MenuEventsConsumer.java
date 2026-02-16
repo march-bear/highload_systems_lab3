@@ -19,7 +19,7 @@ public class MenuEventsConsumer {
     private final NotificationService notifService;
     private final ObjectMapper objectMapper;
 
-    @KafkaListener(topics = "menu-events", groupId = "menu-events-consumer")
+    @KafkaListener(topics = "menu-events", groupId = "notification-service-consumer")
     public void consumeMessage(String message) {
         try {
             JsonNode notification = objectMapper.readTree(message);
@@ -47,9 +47,10 @@ public class MenuEventsConsumer {
                 .message("Created new menu: id = " + menuId + "; meal = " + menuMeal + "; date = " + menuDate + ".")
                 .title("Created menu, id " + menuId)
                 .userId(menuUserId)
+                .isRead(false)
                 .build();
 
-        notifService.save(notification);
+        notifService.save(notification).subscribe();
     }
 
     public void onDeleted(JsonNode tree) {
@@ -64,9 +65,10 @@ public class MenuEventsConsumer {
                 .message("Deleted menu: id = " + menuId + "; meal = " + menuMeal + "; date = " + menuDate + ".")
                 .title("Deleted menu, id " + menuId)
                 .userId(menuUserId)
+                .isRead(false)
                 .build();
 
-        notifService.save(notification);
+        notifService.save(notification).subscribe();
     }
 
     public void onUpdated(JsonNode tree) {
@@ -122,9 +124,10 @@ public class MenuEventsConsumer {
                 .message(message.toString())
                 .title("Updated menu, id " + menuId)
                 .userId(menuUserId)
+                .isRead(false)
                 .build();
 
-        notifService.save(notification);
+        notifService.save(notification).subscribe();
     }
 
     public void onError(JsonNode tree) {
