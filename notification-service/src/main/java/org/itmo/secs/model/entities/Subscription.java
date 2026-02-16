@@ -12,7 +12,6 @@ import lombok.NoArgsConstructor;
 @Table(name = "subscriptions")
 public class Subscription {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
     Long userId;
 }
